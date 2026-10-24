@@ -17,8 +17,10 @@ function installChatMaterials({ getWorkbench, isSelected = () => true, register,
   const handle = (name, action) => register(METHODS[name], action);
   handle('chatMaterialsState', value => { const o = owner(value); return o.materials.state(o.chat); });
   handle('chatMaterialsChooseFiles', value => exclusive(async () => {
-    const o = owner(value); current(o);
-    const result = await dialog.showOpenDialog({ title:'Vælg filer, PDF eller screenshots til denne samtale', properties:['openFile','multiSelections','dontAddToRecent'], filters:[{ name:'Tekst 128 KB · PDF/PNG/JPEG 5 MB', extensions:[...EXTENSIONS] }] });
+    const o = owner(value, ['kind']); current(o);
+    if (value.kind !== undefined && !['text','image','pdf'].includes(value.kind)) throw new Error('Vælg en kendt filtype.');
+    const extensions = value.kind === 'pdf' ? ['pdf'] : value.kind === 'image' ? ['png','jpg','jpeg'] : value.kind === 'text' ? [...EXTENSIONS].filter(ext => !['pdf','png','jpg','jpeg'].includes(ext)) : [...EXTENSIONS];
+    const result = await dialog.showOpenDialog({ title:'Vælg filer, PDF eller screenshots til denne samtale', properties:['openFile','multiSelections','dontAddToRecent'], filters:[{ name:'Tekst 128 KB · PDF/PNG/JPEG 5 MB', extensions }] });
     current(o);
     if (result.canceled || !result.filePaths?.length) return { ...o.materials.state(o.chat), cancelled:true };
     const selected = await o.materials.offerFiles(o.chat, result.filePaths); current(o); return selected;
