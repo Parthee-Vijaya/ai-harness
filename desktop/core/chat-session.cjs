@@ -298,16 +298,17 @@ class ChatSession {
     connections.assertSupported(prepared.connection);
     if (typeof input.text !== 'string' || !input.text.trim() || input.text.length > 30000) throw new Error('Skriv en besked på højst 30.000 tegn.');
     if (prepared.mode === 'build' && prepared.disclosure.planID !== this.plan?.id) throw new Error('Planen har ændret sig. Gennemgå den igen.');
+    const generation = ++this.generation; this.runStopped = false;
+    const checkStopped = () => { if (generation !== this.generation) throw new Error('Opgaven blev stoppet før afsendelse.'); };
     if (Object.hasOwn(prepared.context, 'projectInstructions') && JSON.stringify(await projectInstructions(this.root)) !== JSON.stringify(prepared.context.projectInstructions)) throw new Error('Projektets AGENTS.md har ændret sig. Gennemgå oplysningerne igen før afsendelse.');
     if (prepared.guard) {
       if (prepared.messageText !== null && prepared.messageText !== input.text) throw new Error('Beskeden er ændret. Gennemgå konteksten igen.');
       if (input.contextBinding !== prepared.disclosure.contextBinding) throw new Error('Gennemgå den aktuelle kontekst før afsendelse.');
       await this.checkContext(prepared);
     }
-    const generation = ++this.generation; this.runStopped = false;
-    const checkStopped = () => { if (generation !== this.generation) throw new Error('Opgaven blev stoppet før afsendelse.'); };
     // Kun én samtale ad gangen kan arbejde i den samme mappe.
     // Et efterbillede fra forrige opgave skal være taget, før en ny opgave kan ændre filerne.
+    checkStopped();
     await this.connectionClosing; await bench.pendingImage; checkStopped();
     if (prepared.mode === 'free') { this.retirePlan('direkte'); this.planConversation = []; }
     // Beskeden, som den faktisk sendes: brugerens tekst og eventuelle henvisninger, der er vist i Før du sender.
