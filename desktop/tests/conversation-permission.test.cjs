@@ -23,3 +23,7 @@ test('a stopped or replaced pending request cannot activate a reviewed conversat
  const p={id:'edit',permission:'edit',metadata:{filepath:path.join(f.root,'index.html')},patterns:[]};const request={};chat.engine.pending.set('edit',request);chat.approvals.set('edit',{p,descriptor:await f.policy.describe(f.context,p),request,engine:chat.engine,generation:1});
  const review=chat.permissionReview({id:'edit'});chat.engine.pending.set('edit',{});await assert.rejects(chat.permissionConfirm({token:review.token,acknowledged:true}),/ikke længere/);assert.equal(chat.conversationPermission.active,false);
 });
+
+test('external command dispatcher is shipped outside asar for the pinned Node process', () => {
+ assert.ok(require('../electron-builder.cjs').asarUnpack.includes('core/command-dispatch.cjs'));
+});
