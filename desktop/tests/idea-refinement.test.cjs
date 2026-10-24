@@ -34,7 +34,7 @@ test('all supported provider protocols keep tools absent and explicit OpenRouter
 for(const kind of ['mistral','corti'])test(`${kind}: idea guidance is present in the exact reviewed HTTP request, without files or tools`,async t=>{
  const f=await fixture(t),{loadLibrary}=require('../core/library.cjs');
  const library=await loadLibrary(require('node:path').resolve(__dirname,'../../profiles'));
- library.skills.push({name:'harness-aura-design',files:[{path:'SKILL.md',content:'---\nname: harness-aura-design\ndescription: Synthetic method\n---\n\nByg noget der fungerer.'}]});
+ if (!library.skills.some(skill => skill.name === 'harness-aura-design')) library.skills.push({name:'harness-aura-design',files:[{path:'SKILL.md',content:'---\nname: harness-aura-design\ndescription: Synthetic method\n---\n\nByg noget der fungerer.'}]});
  let enabled=true;f.connection.kind=kind;
  f.bench.skills.context=async root=>{assert.equal(root,null);return {features:{design:enabled},skills:library.skills};};
  const review=await f.service.prepare(input);assert.equal(f.sent.length,0);assert.match(review.system,/HOVEDSKILL TIL BYGNING/);
