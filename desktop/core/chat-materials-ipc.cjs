@@ -17,7 +17,8 @@ function installChatMaterials({ getWorkbench, isSelected = () => true, register,
   const handle = (name, action) => register(METHODS[name], action);
   handle('chatMaterialsState', value => { const o = owner(value); return o.materials.state(o.chat); });
   handle('chatMaterialsChooseFiles', value => exclusive(async () => {
-    const o = owner(value); current(o);
+    const o = owner(value, ['kind']); current(o);
+    if (value.kind !== undefined && value.kind !== 'text') throw new Error('Vælg en kendt filtype.');
     const result = await dialog.showOpenDialog({ title:'Vælg tekst- eller kodefiler til denne samtale', properties:['openFile','multiSelections','dontAddToRecent'], filters:[{ name:'Tekst og kode · højst 128 KB pr. fil', extensions:[...EXTENSIONS] }] });
     current(o);
     if (result.canceled || !result.filePaths?.length) return { ...o.materials.state(o.chat), cancelled:true };
