@@ -42,7 +42,7 @@ function mountView(v) {
   requestAnimationFrame(() => { if (view !== v) return; $('#chat-content').scrollTop = v.followChat ? $('#chat-content').scrollHeight : v.scrollTop; updateChatScroll(); }); v.unread = false; running = v.running; activePlan = v.plan;
   $('#plan-card').hidden = !v.planCard || !v.plan;
   updatePlanOffer(v);
-  applyRunning();
+  applyRunning(); window.ConversationPermission?.sync();
 }
 const anyRunning = () => running || [...views.values()].some(v => v.running);
 // En samtales navn, som sidepanelet viser det.
@@ -371,6 +371,7 @@ async function displayProject(project, { firstTask = false } = {}) {
   usePreviewContext(project.workbench.preview || project);
   window.previewServer?.update(project.runtime);
   if (project.warnings?.length) message(project.warnings.join(' '));
+  view.conversationPermission = project.workbench.conversationPermission || { active: false }; window.ConversationPermission?.sync();
   state = project.workbench; $('#connection-select').value = ''; renderConnections(); applyFeatures();
   const saved = state.projectSettings.selection;
   const startup = state.projectSettings.startup;
@@ -437,6 +438,7 @@ async function showChat(next) {
   state = next;
   const known = views.has(next.chat);
   mountView(viewFor(next.chat));
+  view.conversationPermission = next.conversationPermission || { active: false }; window.ConversationPermission?.sync();
   fillChat(next, !known);
   usePreviewContext(next.preview);
   window.workspace?.clearReferences();
@@ -761,7 +763,7 @@ function setRunning(value, status, v = view) {
   v.running = value; v.runLabel = status;
   if (value) v.statusDetail = status.startsWith('Starter') ? 'Aura starter AI’en …' : $('#work-mode').value === 'plan' ? 'Venter på modellens forslag …' : 'Venter på modellen …';
   if (v === view) { running = value; $('#run-status').textContent = status; updateModelSummary(); }
-  applyRunning(); window.chats?.render();
+  applyRunning(); window.ConversationPermission?.sync(); window.chats?.render();
   if (!anyRunning() && recovery) { const reason = recovery; recovery = ''; showConnectionWarning(reason); }
 }
 // Navigation og indstillinger er tilgængelige, mens opgaver fortsætter i baggrunden.
@@ -824,6 +826,7 @@ window.harness.onEvent(event => {
   if (!event.chat && ['usage', 'plan.ready', 'run.review', 'git.checkpoint', 'session.new', 'run.status', 'message.updated', 'message.part.updated', 'message.part.delta', 'permission.asked', 'question.asked', 'engine.error', 'session.error'].includes(event.type) && !view.id) return;
   const v = viewFor(event.chat), active = v === view;
   if (event.root) v.root ||= event.root;
+  if (event.type === 'conversation.permission') { v.conversationPermission = { active: event.active === true }; if (active) window.ConversationPermission?.sync(); return; }
   if (v.running && ['message.part.updated', 'message.part.delta', 'permission.asked', 'question.asked', 'permission.replied', 'question.replied', 'usage'].includes(event.type)) v.lastSignalAt = Date.now();
   if (event.type === 'run.todos') { v.todos = event.todos; if (active) renderStatus(); return; }
   if (event.type === 'files.written') { if (v.modelProgress) v.modelProgress.draft = null; if (active) renderStatus(); }
