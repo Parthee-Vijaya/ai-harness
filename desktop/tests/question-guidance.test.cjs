@@ -10,7 +10,7 @@ async function setup(t, start = async()=>{}, summarize = async()=>{}) {
 for(const mode of ['chat','plan','build','free'])test(mode+': necessary questions are encouraged without changing chosen mode or plan authority',async t=>{
  const f=await setup(t);f.bench.chat.plan={id:'chosen',text:'Approved user plan',context:'Local demo'};
  const d=await f.bench.prepare({mode,planID:'chosen',connectionID:'fixture',modelID:'fixture',text:'Byg en oversigt'});
- await f.bench.send({text:'Byg en oversigt',fingerprint:d.fingerprint});
+ await f.bench.send({text:'Byg en oversigt',fingerprint:d.fingerprint,contextBinding:d.contextBinding});
  assert.equal(f.sends.length,1);assert.match(f.sends[0].system,/højst tre relevante spørgsmål/);assert.match(f.sends[0].system,/Brugeren kan altid skrive sit eget svar/);
  assert.equal(f.bench.chat.runMode,mode);if(mode==='build')assert.equal(f.bench.chat.plan.id,'chosen');
 });
