@@ -218,3 +218,19 @@ test('projektets instruktioner ændret efter gennemgang blokerer før motoren f�
   assert.equal(f.engines.length, 1);
   assert.equal(f.engines[0].sent.length, 1);
 });
+
+test('recovery preserves the active plan, session and approvals; exhausted transport retains the plan for review', async t => {
+  const f = await fixture(t); await f.send('plan'); await f.finish(plan);
+  const selected = f.bench.chat.plan; await f.send('build'); const chat = f.bench.chat, engine = chat.engine;
+  const binding = { id: 'pending', engine, generation: chat.generation }; chat.approvals.set('pending', binding);
+  const fingerprint = chat.engineIdentity, session = chat.data.opencode.session;
+  chat.event({ type: 'engine.recovery', recovery: { phase: 'retrying', attempt: 2 } });
+  chat.event({ type: 'engine.recovery', recovery: { phase: 'recovered', attempt: 2 } });
+  assert.equal(chat.running, true); assert.equal(chat.runStopped, false); assert.equal(chat.plan, selected);
+  assert.equal(chat.approvals.get('pending'), binding); assert.equal(chat.engineIdentity, fingerprint); assert.equal(chat.engine, engine);
+  assert.equal(engine.sent.length, 1); assert.equal(engine.replies.length, 0);
+  chat.event({ type: 'engine.error', message: 'Bounded timeout', failure: { kind: 'idle' } }); await chat.finishing;
+  assert.equal(chat.plan.id, selected.id); assert.equal(chat.runStopped, false); assert.equal(chat.data.opencode.session, session);
+  assert.equal(f.events.filter(e => e.type === 'run.status').at(-1).status, 'error');
+  const saved = await f.bench.history.readChat(f.root, chat.id); assert.equal(saved.plan.id, selected.id);
+});

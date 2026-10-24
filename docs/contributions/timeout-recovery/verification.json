@@ -1,0 +1,94 @@
+{
+  "date": "2026-10-24",
+  "baseCommit": "14c7130a7ae42704699b7aeea95ab2eba8f465ef",
+  "branch": "fix/compact-onboarding-and-conversation-flow",
+  "runtime": {
+    "node": "22.23.3",
+    "electron": "44.4.4",
+    "opencode": "1.18.33"
+  },
+  "unitTests": {
+    "passed": 746,
+    "failed": 0,
+    "skipped": 0
+  },
+  "liveAI": {
+    "model": "gpt-6.1-sol",
+    "transport": "Local protocol adapter to authenticated Codex CLI; real responses and tools; Aura executes approvals and file actions",
+    "projects": [
+      "Local task board",
+      "Local meeting registrations"
+    ],
+    "faults": [
+      {
+        "failure": "HTTP 503",
+        "samePayload": true,
+        "delayMs": 1003
+      },
+      {
+        "failure": "HTTP 503",
+        "samePayload": true,
+        "delayMs": 1003
+      },
+      {
+        "failure": "HTTP 503",
+        "samePayload": true,
+        "delayMs": 1004
+      }
+    ],
+    "eventLossAtPendingFileApproval": true,
+    "htmlEditAppliedOnce": true,
+    "otherFilesUnchanged": true,
+    "nextTurnActuallyReachedModel": true,
+    "summaryAfterReconnectionAndMemoryAnswer": true,
+    "pageErrors": [],
+    "limits": [
+      "Adapter buffers model output with SSE heartbeats; incremental token streaming covered by controlled transport tests.",
+      "Two additional terminal checks rejected by strict test driver; not claimed as AI validation.",
+      "No claim about untested Corti or Mistral models."
+    ]
+  },
+  "browser": {
+    "checks": [
+      "Opgaver: tydelige eksempeldata",
+      "Opgaver: tom titel valideres",
+      "Opgaver: opret, færdig og filtrér",
+      "Opgaver: gemt efter genindlæsning",
+      "Opgaver: slet",
+      "Opgaver: 390 px uden vandret afskæring",
+      "Borgermøder: fire mærkede eksempelarrangementer",
+      "Borgermøder: søgning, intet resultat og nulstilling",
+      "Borgermøder: navn og antal valideres",
+      "Borgermøder: tilmelding én gang pr. møde",
+      "Borgermøder: tilmelding bevares efter genindlæsning",
+      "Borgermøder: annullér afmelding og bekræftet afmelding",
+      "Borgermøder: oversigt og tilmelding passer ved 390 px"
+    ],
+    "errors": []
+  },
+  "nativePermission": {
+    "passed": true,
+    "realEngine": true,
+    "protectedOutsideFileNotSent": true,
+    "sessionDoesNotPersist": true,
+    "revocationRequiresNewApproval": true,
+    "freeTextQuestionInBuildMode": true,
+    "modelCalls": 8,
+    "errors": []
+  },
+  "nativeWorkspace": {
+    "passed": true,
+    "checks": 63
+  },
+  "sourceSha256": {
+    "desktop/core/model-transport.cjs": "562da74be39e0dba071dd3f852b2d7c5b65d2c64d65ea48b55280cc3474c5557",
+    "desktop/core/engine-events.cjs": "e06e8c2a84064222d2592508ec269437bad86fe5d102c30a779424317e684c4a",
+    "desktop/core/engine.cjs": "455b00845b7c83348bd888e5cac0a2d66fb8d9cc7829f8e4d16737d409fbefa2",
+    "desktop/core/gateway.cjs": "182f36c75544f5d3b52fe314e899a794842949103d897e8600851078a7f67273",
+    "desktop/core/chat-session.cjs": "9469db0ebf7d7d8b76aec35c61148b0a7daf963145637e3ef5b30314ee86cbb4",
+    "desktop/core/connections.cjs": "184cc9b99b84a8cfce56d8c4f035c658869c1b9ab6c3dada52e7ff0089aaf76d",
+    "desktop/ui/app.js": "36848c84126dbacb41fbb7488d271979a35db37b06c4d0718035137dd3780ebe"
+  },
+  "githubCI": "Not claimed",
+  "dmg": "Not requested or built"
+}

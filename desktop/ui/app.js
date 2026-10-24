@@ -909,14 +909,14 @@ window.harness.onEvent(event => {
     const statuses = { starting: 'Starter agent …', working: 'Arbejder …', idle: 'Klar', error: 'Fejl', stopped: 'Stoppet' };
     setRunning(working, statuses[event.status] || event.status, v);
     if (['stopped', 'error'].includes(event.status)) {
-      v.plan = null; v.planCard = false;
+      if (event.status === 'stopped') { v.plan = null; v.planCard = false; }
       if (active) {
         if (!$('#prompt').value) $('#prompt').value = v.lastSentText;
         // Målet i forhåndsvisningen følger med beskeden tilbage, så Send igen retter det samme element.
         if (v.lastTargetRef && !window.workspace?.target()) window.workspace?.setTarget(v.lastTargetRef);
-        activePlan = null; $('#plan-card').hidden = true;
-        if ($('#work-mode').value === 'build') { $('#work-mode').value = 'plan'; updateWorkMode(); }
-      } else v.draft = { text: v.lastSentText, mode: v.draft?.mode === 'build' ? 'plan' : v.draft?.mode || 'chat' };
+        if (event.status === 'stopped') { activePlan = null; $('#plan-card').hidden = true; }
+        if (event.status === 'stopped' && $('#work-mode').value === 'build') { $('#work-mode').value = 'plan'; updateWorkMode(); }
+      } else v.draft = { text: v.lastSentText, mode: event.status === 'stopped' && v.draft?.mode === 'build' ? 'plan' : v.draft?.mode || 'chat' };
     }
     if (!working) { v.approvals.replaceChildren(); if (active) saveChatDraft(); }
   }

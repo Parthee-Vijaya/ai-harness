@@ -387,7 +387,9 @@ class ChatSession {
         const key = bench.store.decrypt(prepared.connection);
         const gateway = await startGateway(prepared.connection, prepared.model, key, prepared.route, (message, failure) => {
           if (this.gateway === gateway && this.running && !this.runStopped) this.event({ type: 'engine.error', message, failure });
-        }, { root: this.root, onProgress: progress => {
+        }, { root: this.root, onRecovery: recovery => {
+          if (this.gateway === gateway && this.running && !this.runStopped) this.event({ type: 'engine.recovery', recovery });
+        }, onProgress: progress => {
           if (this.gateway === gateway && this.running && !this.runStopped) this.emit({ type: 'model.progress', progress });
         } });
         this.gateway = gateway;
@@ -643,6 +645,13 @@ class ChatSession {
   }
   event(event) {
     const p = event.properties || {}, bench = this.bench, owner = (this.copy || bench.checkpointOwner === this);
+    if (event.type === 'engine.recovery') {
+      if (!this.running || this.runStopped || this.finishing) return;
+      const phase = event.recovery?.phase;
+      const details = { waiting: 'Modellen tager længere tid. Aura venter videre på det samme kald.', retrying: 'Aura forsøger at genoprette forbindelsen med samme model og samtale.', checking: 'Aura kontrollerer, om agenten allerede modtog beskeden, før arbejdet fortsætter.', recovered: 'Forbindelsen er genoprettet. Den eksisterende samtale fortsætter.' };
+      this.log({ kind: 'session', title: phase === 'recovered' ? 'Forbindelsen er genoprettet' : 'Genoptager forbindelsen', detail: details[phase], status: phase === 'recovered' ? 'completed' : 'running', task: this.task?.id });
+      return;
+    }
     if (event.compacting || this.compacting) {
       if (event.type === 'message.part.updated' && p.part?.type === 'step-finish' && this.runSteps && !this.runSteps.has(p.part.id)) { this.runSteps.set(p.part.id, p.part.tokens || {}); this.contextUsage.observe(p.part); this.emit({ type: 'usage', usage: this.currentUsage(), contextUsage: this.contextUsage.snapshot() }); }
       if (['session.error', 'engine.error'].includes(event.type)) this.runFailure = { kind: event.failure?.kind || sessionFailure(p.error), message: String(event.message || p.error?.data?.message || 'Sammenfatningen mislykkedes.').slice(0, 800) };
@@ -685,7 +694,7 @@ class ChatSession {
       const status = event.type === 'session.idle' ? 'idle' : 'error';
       this.finishing = (owner ? this.checkpoints.finish() : Promise.resolve()).then(async () => {
         if (this.runStopped) return;
-        if (status === 'error') { this.retirePlan('fejl'); await this.close(false); }
+        if (status === 'error') { await this.close(false); } // A transport failure does not invalidate the user's plan.
         // En bygget plan kan genåbnes og bygges igen; tidspunktet står ved planen.
         if (status === 'idle' && this.runMode === 'build' && this.plan) { this.plan = { ...this.plan, builtAt: Date.now() }; this.emit({ type: 'plan.updated', root: this.project.root, plan: this.plan }); }
         const reply = planningReply(this.runRoles || new Map(), this.runText || new Map());
