@@ -748,6 +748,7 @@ function renderStatus() {
   $('#agent-activity-text').textContent = waiting ? `Venter på dig: ${v.waitingFor[0].title}${v.waitingFor.length > 1 ? ` Og ${v.waitingFor.length - 1} mere.` : ''}` : window.ChatDisplay.phase(v) || v.statusDetail;
   $('#agent-activity-jump').hidden = !waiting; $('#agent-follow').hidden = waiting;
   window.liveWork?.render();
+  window.previewWorking?.render();
   const progress = window.ChatDisplay.progress(v);
   $('#agent-progress').textContent = progress.text; $('#agent-progress').hidden = waiting;
   $('#agent-activity').classList.toggle('is-quiet', progress.quiet && !waiting);
