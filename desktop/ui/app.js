@@ -1630,6 +1630,10 @@ function renderShortlist() {
     const button = node('button', undefined, 'model-choice'); button.type = 'button'; button.dataset.model = model.id;
     button.append(node('strong', model.name), node('span', text));
     window.OnboardingB?.decorateProviderCard(button, kind);
+    if (kind === 'openrouter' && window.ProviderBrand) {
+      const logo = button.querySelector('img'), asset = window.ProviderBrand.asset(kind, model.id);
+      if (logo && asset) logo.src = asset; else if (!asset) logo?.remove();
+    }
     // Et klik vælger modellen og lukker dialogen. Kun OpenRouter kræver bagefter et valg af udbyder.
     button.onclick = () => action(async () => {
       if ($('#model-select').value !== model.id) view.effort = null;
