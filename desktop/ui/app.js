@@ -1759,7 +1759,7 @@ function renderRunReview(result, v = view) {
     }, true);
     box.append(build); return;
   }
-  if (['chat', 'plan'].includes(result.mode) && !result.files.length) { box.hidden = true; return; }
+  if (!result.files.length) { box.hidden = true; return; }
   show();
   box.classList.toggle('is-reviewed', v.reviewedTask === result.task);
   box.append(node('p', result.files.length ? `${result.files.length} ${result.files.length === 1 ? 'fil ændret' : 'filer ændret'}${saved ? ' · Gemt' : ''}` : 'Opgaven er afsluttet uden filændringer.', 'result-receipt'));
