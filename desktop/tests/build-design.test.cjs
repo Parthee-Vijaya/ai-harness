@@ -11,11 +11,11 @@ async function fixture(t) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'aura-primary-skill-'));
   t.after(() => fs.rm(root, { recursive: true, force: true }));
   const library = await loadLibrary(path.resolve(__dirname, '../../profiles'));
-  library.skills.push({ name, title: 'Synthetic build method', summary: 'Fixture', files: [
+  if (!library.skills.some(skill => skill.name === 'harness-aura-design')) library.skills.push({ name, title: 'Synthetic build method', summary: 'Fixture', files: [
     { path: 'SKILL.md', content: '---\nname: harness-aura-design\ndescription: Synthetic build method\n---\n\nByg noget der fungerer. Se references/webapp-craft.md.\n' },
     { path: 'references/webapp-craft.md', content: 'Synthetic reference for export testing.' }
   ] });
-  library.features.find(feature => feature.id === 'design').skills.push(name);
+  if (!library.features.find(feature => feature.id === 'design').skills.includes(name)) library.features.find(feature => feature.id === 'design').skills.push(name);
   const store = new Store(path.join(root, 'data')), features = new Features(store, async () => library);
   return { root, library, store, features, skills: new Skills(async () => library, store, features) };
 }

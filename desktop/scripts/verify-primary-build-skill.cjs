@@ -25,8 +25,8 @@ async function scenario(kind, mode, design, surface = 'desktop') {
     await new Promise(resolve => server.listen(0,'127.0.0.1',resolve));
     bench = new Workbench({directory:path.join(root,'data'),profiles:path.resolve(__dirname,'../../profiles'),surface,safeStorage:{},emit:event=>events.push(event)});
     const library=await bench.library();
-    library.skills.push({name:'harness-aura-design',title:'Syntetisk metode',summary:'Test',files:[{path:'SKILL.md',content:'---\nname: harness-aura-design\ndescription: Synthetic method\n---\n\nByg noget der fungerer.'}]});
-    library.features.find(f=>f.id==='design').skills.push('harness-aura-design');
+    if (!library.skills.some(skill => skill.name === 'harness-aura-design')) library.skills.push({name:'harness-aura-design',title:'Syntetisk metode',summary:'Test',files:[{path:'SKILL.md',content:'---\nname: harness-aura-design\ndescription: Synthetic method\n---\n\nByg noget der fungerer.'}]});
+    if (!library.features.find(f=>f.id==='design').skills.includes('harness-aura-design')) library.features.find(f=>f.id==='design').skills.push('harness-aura-design');
     await bench.activate({root:project,name:'Syntetisk prøve'});
     await bench.features.save(project,{scope:'projekt',values:{design}});
     const modelID = kind === 'mistral' ? 'mistral-large-4' : 'corti-s1';
