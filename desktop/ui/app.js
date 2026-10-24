@@ -400,6 +400,8 @@ async function displayProject(project, { firstTask = false } = {}) {
 // beskederne skal vises fra den gemte samtale; ellers står de allerede i samtalens visning.
 function fillChat(next, fresh) {
   const history = next.workspace, v = view;
+  // An empty event-created view has not restored its persisted plan yet.
+  fresh ||= !v.historyLoaded && !v.log.children.length;
   if (fresh || !v.historyLoaded && !v.log.children.length) { const page=window.HistoryPages.takePrevious(history?.messages || []);v.historyPending=page.older;v.historyLoaded=true;for(const item of page.recent)appendMessage(item.text,item.role); }
   renderHistoryControls();
   const empty = !v.log.children.length;
