@@ -1,0 +1,92 @@
+/* Konkret godkendt fork-flow: behold onboarding B og de eksisterende kontroller. */
+#setup.onboarding-b{position:relative}
+#setup.onboarding-b,#onboarding.onboarding-b{padding:24px 32px 28px}
+#setup.onboarding-b .setup-topbar{margin-bottom:18px}
+#setup.onboarding-b .setup-heading{margin-bottom:16px}
+#setup.onboarding-b .setup-heading h1,#onboarding.onboarding-b .intro h1{font-size:clamp(28px,2.7vw,38px);margin:7px 0 10px}
+#setup.onboarding-b .setup-heading>p,#onboarding.onboarding-b .intro>p{font-size:14px;line-height:1.6}
+#setup.onboarding-b .setup-quick-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin:0 0 16px}
+#setup.onboarding-b .setup-quick-actions button{border:1px solid var(--line);border-radius:10px;background:var(--surface,#fff);padding:10px 14px;font-size:13px;color:var(--ink);font-weight:600}
+#setup.onboarding-b .onboarding-b-progress{padding-bottom:16px;margin-bottom:20px}
+#setup.onboarding-b #setup-choice{margin-top:0}
+#setup.onboarding-b #setup-choice>button{min-height:175px;padding:22px}
+#onboarding.onboarding-b .intro{margin-bottom:20px}
+#onboarding.onboarding-b #create-form>.panel{padding-top:0;margin-top:0}
+#onboarding.onboarding-b #name{margin-bottom:18px}
+#onboarding.onboarding-b #purpose{min-height:105px}
+#onboarding.onboarding-b #project-options{border:1px solid var(--line);border-radius:13px;background:var(--surface,#fff);padding:0;overflow:clip;margin-top:18px}
+#onboarding.onboarding-b #project-options>summary{padding:14px 18px;font-size:13px;font-weight:600;color:var(--ink)}
+#onboarding.onboarding-b #project-options>.settings-list{margin:0 16px 14px;border:0}
+#onboarding.onboarding-b #project-options>.panel,#onboarding.onboarding-b #project-options>.hint{margin-left:16px;margin-right:16px}
+#onboarding.onboarding-b .create-footer{margin-top:18px}
+.material-menu-wrap{position:relative;flex:none}#chat-materials-plus{height:34px;width:34px;padding:0;font-size:25px;line-height:1;color:var(--muted);border:0;background:transparent;border-radius:8px}
+#chat-materials-menu{position:absolute;bottom:44px;left:0;width:min(270px,calc(100vw - 65px));padding:9px;border:1px solid var(--line);border-radius:14px;background:var(--surface,#fff);box-shadow:0 12px 35px #14284126;z-index:20}
+#chat-materials-menu>strong{display:block;padding:7px 9px;font-size:11px;font-weight:600;color:var(--muted);text-align:left}
+#chat-materials-menu button{display:block;text-align:left;width:100%;border:0;background:transparent;padding:10px;font-size:13px;border-radius:8px}
+#chat-materials-menu button:hover{background:var(--soft,#f1f5f9)}#chat-materials-menu small{display:block;color:var(--muted);font-weight:400;font-size:11px;margin-top:3px}
+#chat-materials-menu #chat-materials-folder{border-top:1px solid var(--line);border-radius:0;margin-top:5px;padding-top:13px}
+.composer-shortcut{font-size:10px;margin:0 5px 3px;color:var(--muted)}
+:is(#setup.onboarding-b,#onboarding.onboarding-b) .onboarding-b-data-path{grid-template-columns:minmax(0,1fr) 12px minmax(0,1fr) 12px minmax(0,1fr);gap:4px}
+:is(#setup.onboarding-b,#onboarding.onboarding-b) .onboarding-b-route-arrow svg{width:12px}
+:is(#setup.onboarding-b,#onboarding.onboarding-b) .onboarding-b-route-node :is(strong,small){overflow-wrap:normal}
+@media(min-width:900px) and (max-height:900px){
+  #setup.onboarding-b,#onboarding.onboarding-b{padding-top:18px;padding-bottom:20px}
+  #setup.onboarding-b .setup-topbar{margin-bottom:12px}
+  #setup.onboarding-b .setup-heading{margin-bottom:12px}
+  #setup.onboarding-b .setup-quick-actions{position:absolute;right:32px;top:108px;max-width:40%}
+  #setup.onboarding-b .setup-heading{padding-right:40%}
+  #setup.onboarding-b .setup-heading h1{font-size:30px}
+  :is(#setup.onboarding-b,#onboarding.onboarding-b) .onboarding-b-visual-top{padding:14px 14px 0;font-size:8px}
+  :is(#setup.onboarding-b,#onboarding.onboarding-b) .onboarding-b-art{height:142px;margin-top:8px}
+  :is(#setup.onboarding-b,#onboarding.onboarding-b) .onboarding-b-art-ring{width:126px;height:126px}
+  :is(#setup.onboarding-b,#onboarding.onboarding-b) .onboarding-b-hero{width:60px;height:60px}
+  :is(#setup.onboarding-b,#onboarding.onboarding-b) .onboarding-b-hero img{width:40px;height:40px}
+  :is(#setup.onboarding-b,#onboarding.onboarding-b) .onboarding-b-visual[data-kind=''] .onboarding-b-hero img{width:50px;height:50px}
+  :is(#setup.onboarding-b,#onboarding.onboarding-b) .onboarding-b-art-pill{font-size:8px;padding:4px 8px;bottom:-4px}
+  :is(#setup.onboarding-b,#onboarding.onboarding-b) .onboarding-b-visual-copy{padding:0 16px}
+  :is(#setup.onboarding-b,#onboarding.onboarding-b) .onboarding-b-visual-heading{font-size:20px;margin:9px 0}
+  :is(#setup.onboarding-b,#onboarding.onboarding-b) .onboarding-b-visual-heading em{font-size:23px}
+  :is(#setup.onboarding-b,#onboarding.onboarding-b) .onboarding-b-visual-description{font-size:10px;line-height:1.5}
+  :is(#setup.onboarding-b,#onboarding.onboarding-b) .onboarding-b-data-path{margin:14px 12px}
+  :is(#setup.onboarding-b,#onboarding.onboarding-b) .onboarding-b-route-node{gap:4px}
+  :is(#setup.onboarding-b,#onboarding.onboarding-b) .onboarding-b-route-node strong{font-size:9px}
+  :is(#setup.onboarding-b,#onboarding.onboarding-b) .onboarding-b-route-node small{font-size:8px}
+  :is(#setup.onboarding-b,#onboarding.onboarding-b) .onboarding-b-route-tile{width:28px;height:28px}
+  :is(#setup.onboarding-b,#onboarding.onboarding-b) .onboarding-b-visual-note{padding:10px 12px;font-size:9px;line-height:1.6}
+}
+@media(max-width:700px){#setup.onboarding-b,#onboarding.onboarding-b{padding:20px 18px}#setup.onboarding-b .setup-quick-actions{justify-content:flex-start}.composer-toolbar{flex-wrap:wrap}}
+
+#conversation-permission-dialog{width:min(560px,calc(100vw - 32px));max-height:90vh;overflow:auto;padding:28px;border:1px solid var(--line);border-radius:20px}
+#conversation-permission-dialog p,#conversation-permission-dialog li{font-size:13px;line-height:1.7}
+#conversation-permission-dialog .check-label{align-items:flex-start;line-height:1.6;font-size:13px}
+.permission-boundary{background:var(--soft,#f1f5f9);border-radius:12px;padding:14px 16px;margin:16px 0}
+.permission-boundary p{margin-bottom:0}
+#conversation-permission-status{display:flex;align-items:center;justify-content:space-between;background:var(--soft,#f1f5f9);padding:8px 12px;border-radius:9px;font-size:12px;margin:0 12px}
+#conversation-permission-status button{font-size:11px;padding:4px 8px}
+
+#idea-refinement{margin-top:14px;padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--surface,#fff)}
+.idea-refine-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px}.idea-refine-actions button{font-size:13px;padding:9px 13px}.idea-refine-actions .hint{font-size:11px;margin:0}
+.idea-model-row{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px}.idea-model-row>div{flex:1;min-width:170px}.idea-model-row label{margin-top:0;font-size:12px}
+#idea-refinement :is(label,h3){font-size:13px;margin-top:18px}#idea-refinement textarea{font-size:14px}#idea-refine-plan{white-space:pre-wrap;font-size:13px;line-height:1.7}#idea-refine-questions{font-size:14px;line-height:1.8}
+#idea-refine-status{font-size:13px;line-height:1.6}.is-thinking:before{content:'';display:inline-block;width:13px;height:13px;margin-right:9px;border:2px solid var(--line);border-top-color:var(--accent,#0056d9);border-radius:50%;vertical-align:-2px;animation:idea-spin 1s linear infinite}@keyframes idea-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.is-thinking:before{animation:none}}
+#idea-review-dialog{width:min(640px,calc(100vw - 32px));max-height:88vh;overflow:auto;border:1px solid var(--line);border-radius:18px;padding:24px}#idea-review-details{display:grid;grid-template-columns:110px minmax(0,1fr);font-size:12px;gap:10px;line-height:1.6}#idea-review-details dd{margin:0;overflow-wrap:anywhere}#idea-review-content{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;max-height:250px;overflow:auto}
+
+@media(min-width:900px) and (max-height:900px){
+ #setup.onboarding-b:is([data-step=choice],[data-step=features]) .onboarding-b-art{display:block}
+ #setup.onboarding-b:is([data-step=choice],[data-step=features]) .onboarding-b-data-path{display:grid}
+ #setup.onboarding-b:is([data-step=choice],[data-step=features]) .onboarding-b-visual-copy{padding:0 16px}
+ :is(#setup.onboarding-b,#onboarding.onboarding-b) .onboarding-b-orbit{width:26px;height:26px;border-radius:8px}
+ :is(#setup.onboarding-b,#onboarding.onboarding-b) .onboarding-b-orbit img{width:18px;height:18px}
+}
+@media(min-width:900px) and (max-height:760px){
+ #setup.onboarding-b:is([data-step=choice],[data-step=features]){padding-bottom:16px}
+ #setup.onboarding-b:is([data-step=choice],[data-step=features]) .setup-heading{margin:8px 0 12px}
+ #setup.onboarding-b:is([data-step=choice],[data-step=features]) .onboarding-b-progress{margin-bottom:14px;padding-bottom:12px}
+ #setup.onboarding-b:is([data-step=choice],[data-step=features]) .onboarding-b-art{height:112px}
+ #setup.onboarding-b:is([data-step=choice],[data-step=features]) .onboarding-b-art-ring{width:100px;height:100px}
+ #setup.onboarding-b:is([data-step=choice],[data-step=features]) .onboarding-b-art-ring::before{inset:12px}
+ #setup.onboarding-b:is([data-step=choice],[data-step=features]) .onboarding-b-art-ring::after{inset:24px}
+ #setup.onboarding-b:is([data-step=choice],[data-step=features]) .onboarding-b-visual-heading{font-size:19px}
+ #setup.onboarding-b:is([data-step=choice],[data-step=features]) .onboarding-b-visual-heading em{font-size:21px}
+}

@@ -5,7 +5,7 @@
   const preset = el('viewport-preset'), width = el('viewport-width'), height = el('viewport-height'), zoom = el('viewport-zoom');
   const sizes = { desktop: [1920, 1080], tablet: [768, 1024], phone: [390, 844] };
   const storageKey = 'harness-workspace-layout-v1';
-  let settings = { chat: 420, preset: 'fluid', width: 390, height: 844, zoom: 'fit' };
+  let settings = { chat: 380, preset: 'fluid', width: 390, height: 844, zoom: 'fit' };
   try {
     const saved = JSON.parse(localStorage.getItem(storageKey));
     if (saved && Number.isFinite(saved.chat)) settings.chat = Math.max(280, saved.chat);
@@ -59,7 +59,7 @@
   });
   function finish() { if (pointer === null) return; pointer = null; document.body.classList.remove('resizing-workspace'); save(); }
   divider.addEventListener('pointerup', finish); divider.addEventListener('pointercancel', finish); divider.addEventListener('lostpointercapture', finish); window.addEventListener('blur', finish);
-  divider.addEventListener('dblclick', () => { settings.chat = 420; split(); save(); });
+  divider.addEventListener('dblclick', () => { settings.chat = 380; split(); save(); });
   divider.addEventListener('keydown', event => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
     event.preventDefault();

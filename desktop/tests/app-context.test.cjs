@@ -41,3 +41,23 @@ test('planning sends the reviewed clarification and current prompt unchanged',as
  await f.bench.send({text,fingerprint:d.fingerprint,contextBinding:d.contextBinding});
  assert.equal(f.sends[0].text,text);for(const part of d.appContext.components)assert.ok(f.sends[0].system.includes(part.text));
 });
+
+for(const kind of ['mistral','corti']) for(const mode of ['plan','build','free']) test(`${kind} ${mode}: reviewed primary design core is sent before any skill retrieval`,async t=>{
+ const f=await setup(t);f.bench.selection=async()=>({connection:{id:'fixture',kind,name:'Syntetisk',baseURL:'http://127.0.0.1:1/v1'},model:{id:'fixture'}});
+ f.bench.chat.plan={id:'chosen-plan',text:'Byg den aftalte oversigt',context:'Ingen eksterne data'};
+ const text='En app til at melde sig til borgermøder i Nyborg Kommune';
+ const d=await f.bench.prepare({mode,planID:'chosen-plan',connectionID:'fixture',modelID:'fixture',text});
+ const core=d.appContext.components.find(p=>p.id==='Hovedskill til bygning');assert.ok(core);assert.match(core.text,/Fra én sætning/);
+ await f.bench.send({text,fingerprint:d.fingerprint,contextBinding:d.contextBinding});assert.equal(f.sends.length,1);assert.ok(f.sends[0].system.includes(core.text));
+ if(mode==='build')assert.equal(f.bench.chat.plan.id,'chosen-plan');
+ else assert.equal(f.bench.chat.lastPlan.id,'chosen-plan');
+});
+test('ordinary chat has no forced primary core and a changed design choice invalidates the build review',async t=>{
+ const f=await setup(t),chat=await f.prepare();assert.ok(!chat.appContext.components.some(p=>p.id==='Hovedskill til bygning'));
+ const d=await f.bench.prepare({mode:'free',connectionID:'fixture',modelID:'fixture',text:'Byg'});
+ await f.bench.features.save(f.project,{scope:'projekt',values:{design:false}});
+ await assert.rejects(f.bench.send({text:'Byg',fingerprint:d.fingerprint,contextBinding:d.contextBinding}),/ændret/);
+ assert.equal(f.sends.length,0);assert.equal(f.starts(),0);
+ const next=await f.bench.prepare({mode:'free',connectionID:'fixture',modelID:'fixture',text:'Byg'});
+ assert.ok(!next.appContext.components.some(p=>p.id==='Hovedskill til bygning'));
+});

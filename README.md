@@ -32,6 +32,8 @@ Projektet tager udgangspunkt i kommunernes behov og henvender sig til udviklere,
 
 Beskriv, hvad du vil lave, og arbejd videre med AI’en i et lokalt projekt. Samtalen står ved siden af arbejdsfladen, hvor du kan se resultatet og gennemgå det arbejde, der ligger bag.
 
+Den lokale udviklingsgren har nu den [godkendte mørke arbejdsvisning](docs/contributions/fork-workspace-calm/README.md) med diskret arbejdskant, samlet plusmenu og arbejdsstatus ved forhåndsvisningen. Se skærmbilleder og testresultater i beskrivelsen. Denne ændring er endnu ikke udgivet som en ny installationspakke.
+
 - **Afklar og planlæg.** Beskriv brugerne, opgaven og de vigtigste krav. Gennemgå AI’ens forslag, før du beder den bygge.
 - **Følg ændringerne.** Gennemgå filændringer og de handlinger, der kræver din godkendelse. Ved lange forslag kan **Vis flere linjer** indlæse resten før godkendelse; se [gennemgang af alle diff-linjer](docs/contributions/f31.md). Fanerne Plan, Ændringer, Kode og Aktivitet samler detaljerne.
 - **Medtag udvalgte tekstfiler.** Vælg **Vedhæft filer** i samtalen, eller **Referencemappe · kun læsning** for at vælge enkelte filer fra en mappe. Gennemgå indholdet, og godkend den konkrete afsendelse. Se [filvalg og grænser](docs/contributions/f13.md) samt [referencemapper og før/efterprøven](docs/contributions/f14.md).
@@ -53,7 +55,7 @@ Under **Indstillinger → Funktioner** vælger du blandt andet planlægning, ver
 
 *Funktionerne styrer, hvilke arbejdsgange og instruktioner Aura stiller til rådighed. De er ikke en sikkerheds- eller myndighedsgodkendelse.*
 
-Designfunktionen indeholder også [Aura-design til dine apps](docs/aura-design-skill.md): en genbrugelig metode til brandkilder, designretning, farver, temaer og appmønstre i dit projekt. Den følger det eksisterende designvalg og ændrer ikke Auras egen brugerflade eller godkendelser.
+Designfunktionen bruger [Aura-design til dine apps](docs/aura-design-skill.md) som hovedskill. Kernen følger automatisk med ved idéhjælp, planlægning og bygning, også fra en kort idé: passende designretning, fungerende handlinger, tilgængelighed og faktisk afprøvning. Det gælder på tværs af modeller, herunder Mistral og Corti, og følger det eksisterende til-/fravalg. Auras egen brugerflade, planer og godkendelser bevares. At instruktionerne når frem er ikke en garanti for samme kvalitet fra alle modeller.
 
 ## Brug Aura i terminalen
 

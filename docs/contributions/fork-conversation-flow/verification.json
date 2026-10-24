@@ -1,0 +1,63 @@
+{
+  "date": "2026-10-24T20:03:59.327420+02:00",
+  "base": "14c7130a7ae42704699b7aeea95ab2eba8f465ef",
+  "branch": "fix/compact-onboarding-and-conversation-flow",
+  "desktop": {
+    "tests": 705,
+    "pass": 705,
+    "fail": 0,
+    "skipped": 0
+  },
+  "cli": {
+    "tests": 27,
+    "pass": 27,
+    "fail": 0,
+    "skipped": 0
+  },
+  "nativeFlow": {
+    "passed": true,
+    "maximized": true,
+    "layout": [
+      {
+        "w": 1440,
+        "h": 900,
+        "scroll": 900,
+        "body": 747,
+        "button": 193,
+        "card": 486.8828125,
+        "visual": 727.125
+      },
+      {
+        "w": 1280,
+        "h": 800,
+        "scroll": 800,
+        "body": 751,
+        "button": 193,
+        "card": 482.8828125,
+        "visual": 726.875
+      },
+      {
+        "w": 980,
+        "h": 720,
+        "scroll": 720,
+        "body": 716,
+        "button": 193,
+        "card": 488.578125,
+        "visual": 699.96875
+      }
+    ],
+    "aiCalls": 2,
+    "errors": []
+  },
+  "nativePermission": {
+    "passed": true,
+    "realEngine": true,
+    "protectedOutsideFileNotSent": true,
+    "sessionDoesNotPersist": true,
+    "revocationRequiresNewApproval": true,
+    "freeTextQuestionInBuildMode": true,
+    "modelCalls": 8,
+    "errors": []
+  },
+  "scope": "Local source app; synthetic model endpoint; no GitHub CI or new DMG"
+}

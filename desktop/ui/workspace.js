@@ -12,6 +12,7 @@
 
   function show(name, { focus = false } = {}) {
     if (!tabs.includes(name)) return;
+    window.calmWorkspace?.showSurface();
     active = name;
     for (const item of tabs) {
       const selected = item === name;
