@@ -904,7 +904,35 @@ $('#new').onclick = () => action(async () => {
   state.features = features; await loadStartup(); if (request !== navigationRequest || current) return;
   applyFeatures(); nameTouched = false; saveIdeaDraft(); showIdeaExamples(); $('#purpose').focus();
 });
-$('#create-form').onsubmit = event => { event.preventDefault(); action(async () => { $('#create').disabled = true; $('#create').textContent = 'Åbner projektmappen …'; try { const created = await call('createProject', { name: $('#name').value, purpose: $('#purpose').value, color: projectColor(), links: $('#links').value.split('\n').map(line => line.trim()).filter(Boolean), tests: $('#tests').value, startup: startupValues() }); if (created) { await displayProject(created, { firstTask: true }); clearIdeaDraft(); $('#start-idea').click(); } } finally { $('#create').disabled = false; $('#create').textContent = 'Opret projekt'; } }); };
+$('#create-form').onsubmit = event => {
+  event.preventDefault();
+  action(async () => {
+    $('#create').disabled = true;
+    $('#create').textContent = 'Åbner projektmappen …';
+    const refined = window.IdeaRefinement?.take();
+    try {
+      const created = await call('createProject', {
+        name: $('#name').value, purpose: $('#purpose').value, color: projectColor(),
+        links: $('#links').value.split('\n').map(line => line.trim()).filter(Boolean),
+        tests: $('#tests').value, startup: startupValues()
+      });
+      if (!created) return;
+      await displayProject(created, { firstTask: true });
+      clearIdeaDraft();
+      if (!refined) { $('#start-idea').click(); return; }
+      // Preserve the reviewed proposal even if the model catalog is temporarily unavailable.
+      window.draftMessage(refined.text + '\n\nForslag fra idéhjælpen (ikke en godkendt byggeplan):\n' + refined.plan +
+        '\n\nAfklar eventuelle mangler, og lav en plan til min gennemgang, før der bygges.',
+        'Din beskrivelse og dit planforslag er klar til gennemgang.',
+        { mode: featureOn('planlaegning') ? 'plan' : 'chat' });
+      $('#connection-select').value = refined.selection.connectionID;
+      await loadModels(refined.selection);
+    } finally {
+      $('#create').disabled = false;
+      $('#create').textContent = 'Opret projekt';
+    }
+  });
+};
 $('#connections-button').onclick = () => action(async () => { const owner = selectedOwner(), ticket = navigationRequest; if (setupActive && setupStep === 'provider') setupPage('tools'); moveConnectionForm(false); const next = await call('connectionState', undefined, owner); if (ticket !== navigationRequest || owner?.root !== current?.root) return; state = next; renderConnections(); updateProvider(); connectionView('list'); $('#connections-feedback').textContent = ''; $('#connections-dialog').showModal(); });
 $('#provider-kind').onchange = () => { updateProvider(); };
 $('#connection-form').onsubmit = event => {

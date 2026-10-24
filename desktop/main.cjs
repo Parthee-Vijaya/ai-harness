@@ -39,6 +39,7 @@ let selectedRoot = null;
 function currentWorkbench() { return requests.getStore()?.bench || registry?.selected; }
 // En IPC-handling beholder projektets ejer, også hvis brugeren skifter fane under et await.
 const workbench = new Proxy({}, { get(_target, key) { const owner = currentWorkbench(), value = owner?.[key]; return typeof value === 'function' ? value.bind(owner) : value; } });
+const ideaRefinement = new (require('./core/idea-refinement.cjs').IdeaRefinement)({ getWorkbench: () => registry?.empty });
 function currentProject() { return currentWorkbench()?.project || null; }
 function requestChatID() { return requests.getStore()?.chat || currentWorkbench()?.chatID; }
 function currentChat() { const id = requestChatID(); return id ? currentWorkbench()?.chats.get(id) : currentWorkbench()?.chat; }
@@ -90,7 +91,7 @@ function supportReport() {
   return require('./core/diagnostics.cjs').diagnostics({ version: app.getVersion(), platform: process.platform, arch: process.arch, packaged: app.isPackaged, versions: require('./core/runtime.cjs').get()?.versions, project: Boolean(currentProject()), running: workbench?.running, preview: currentSpace().devServer?.state, failures });
 }
 function shutdown() {
-  if (!shuttingDown) shuttingDown = (async () => { github?.cancel(); deploymentSetup?.promte.cancelAll(); await registry?.close(); await closeSpaces(); })().finally(() => { shuttingDown = null; });
+  if (!shuttingDown) shuttingDown = (async () => { ideaRefinement.stop(); github?.cancel(); deploymentSetup?.promte.cancelAll(); await registry?.close(); await closeSpaces(); })().finally(() => { shuttingDown = null; });
   return shuttingDown;
 }
 const uiURL = 'harness://app/index.html';
@@ -98,6 +99,7 @@ const profileRoot = app.isPackaged ? path.join(process.resourcesPath, 'profiles'
 if (app.isPackaged) require('./core/runtime.cjs').configure(process.resourcesPath);
 
 async function activate(next) {
+  ideaRefinement.stop();
   await stopPicking('project');
   const owner = await registry.select(next), request = requests.getStore();
   if (request) { request.bench = owner; request.workspaceRoot = owner.chat?.root || owner.project.root; request.chat = owner.chatID; }
@@ -579,6 +581,9 @@ handle('komplai:publish-disconnect', () => exclusive(() => require('./core/kompl
 handle('connections:state', () => workbench.state(requestChatID()));
 handle('connections:save', value => exclusive(() => workbench.saveConnection(value)));
 handle('connections:remove', value => exclusive(() => workbench.removeConnection(value)));
+handle('idea:prepare', value => { if (currentProject()) throw new Error('Brug idéhjælpen før projektoprettelse.'); return ideaRefinement.prepare(value); });
+handle('idea:send', value => { if (currentProject()) throw new Error('Idéhjælpen er lukket.'); return ideaRefinement.send(value); });
+handle('idea:stop', () => ideaRefinement.stop());
 handle('connections:models', value => workbench.models(value));
 handle('connections:routes', value => workbench.routes(value.connectionID, value.modelID));
 handle('agent:prepare', value => exclusive(() => workbench.prepare(chatInput(value))));
@@ -912,7 +917,7 @@ app.whenReady().then(async () => {
     const url = new URL(request.url);
     const name = url.pathname.slice(1);
     const providerAsset = /^provider-(alexandra|anthropic|azure|compatible|corti|komplai|mistral|ollama|openai|openrouter|zen|promte|github-pages|cloudflare|vercel)\.svg$/.test(name);
-    if (url.host !== 'app' || (!providerAsset && name !== 'provider-cloudflare.png' && !['index.html', 'project-settings.js', 'aura-icon.png', 'app.js', 'updates.js', 'workspace.js', 'plan-view.js', 'planning.js', 'approval-view.js', 'approvals.js', 'preview-edit.js', 'history.js', 'chats.js', 'palette.js', 'model-advice.js', 'connection-overview.js', 'chat-display.js', 'conversation-mode.js', 'live-work.js', 'server.js', 'viewport.js', 'share-view.js', 'hosting.js', 'deployment-setup.js', 'promte-preview.js', 'komplai-preview.js', 'deployment.js', 'styles.css', 'demo.css'].includes(name))) return new Response('Ikke fundet', { status: 404 });
+    if (url.host !== 'app' || (!providerAsset && name !== 'provider-cloudflare.png' && !['idea-refinement.js', 'idea-refinement.css', 'index.html', 'project-settings.js', 'aura-icon.png', 'app.js', 'updates.js', 'workspace.js', 'plan-view.js', 'planning.js', 'approval-view.js', 'approvals.js', 'preview-edit.js', 'history.js', 'chats.js', 'palette.js', 'model-advice.js', 'connection-overview.js', 'chat-display.js', 'conversation-mode.js', 'live-work.js', 'server.js', 'viewport.js', 'share-view.js', 'hosting.js', 'deployment-setup.js', 'promte-preview.js', 'komplai-preview.js', 'deployment.js', 'styles.css', 'demo.css'].includes(name))) return new Response('Ikke fundet', { status: 404 });
     return new Response(await fs.readFile(path.join(__dirname, 'ui', name)), { headers: { 'Content-Type': name === 'aura-icon.png' ? 'image/png' : providerAsset ? 'image/svg+xml' : name.endsWith('.js') ? 'text/javascript' : name.endsWith('.css') ? 'text/css' : 'text/html; charset=utf-8' } });
   });
   session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));

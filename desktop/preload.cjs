@@ -15,7 +15,7 @@ const methods = {
   discoverLocalModels: 'connections:discover', setupStatus: 'setup:status', providerAccount: 'connections:account',
   gitIdentity: 'git:identity', gitStatus: 'git:status', gitInit: 'git:init', gitReview: 'git:review', gitCommit: 'git:commit', gitSave: 'git:save', gitAutomatic: 'git:automatic',
   listDesigns: 'designs:list', saveDesign: 'designs:save', applyDesign: 'designs:apply',
-  createProject: 'project:create', openProject: 'project:open', newProject: 'project:new', chooseAssets: 'assets:choose', removeAsset: 'assets:remove', revision: 'preview:revision', attachPreview: 'preview:attach',
+  ideaPrepare: 'idea:prepare', ideaSend: 'idea:send', ideaStop: 'idea:stop', createProject: 'project:create', openProject: 'project:open', newProject: 'project:new', chooseAssets: 'assets:choose', removeAsset: 'assets:remove', revision: 'preview:revision', attachPreview: 'preview:attach',
   komplaiLogin: 'komplai:login', komplaiCancel: 'komplai:cancel', komplaiConnect: 'komplai:connect', komplaiPublishState: 'komplai:publish-state', komplaiPublishOverview: 'komplai:publish-overview', komplaiPublishAddress: 'komplai:publish-address', komplaiPublishDisconnect: 'komplai:publish-disconnect',
   connectionState: 'connections:state', saveConnection: 'connections:save', removeConnection: 'connections:remove', models: 'connections:models', routes: 'connections:routes',
   toolsCatalog: 'tools:catalog', toolsFolder: 'tools:folder', toolsReview: 'tools:review', toolsInstall: 'tools:install', toolsRemoval: 'tools:removal', toolsRemove: 'tools:remove', toolsReveal: 'tools:reveal',
