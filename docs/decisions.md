@@ -683,3 +683,49 @@ Brugeren har bedt om en samlet UI/UX-gennemgang og klargøring før en pilot med
 - Gem version venter på den igangværende filgennemgang. Det kontrolleres med et forsinket faktisk IPC-svar i den pakkede app.
 - Kandidaten er `0.2.0-beta.4`; den lokale pakke er ikke en notariseret eller publiceret udgivelse. CI-kontroller er skrevet, men ikke kørt på GitHub i denne gennemgang.
 - Den første brugerobservation er pilotens formål. Afprøvet model, konkret installation og downloadadgang går forud for invitation; brugerobservationen fuldender derefter milepæl 7. Rapport og kort testmateriale ligger i demogennemgang.md og demo-til-testere.md.
+
+## Bidrag fra Parthee Vijayamohan · 25. oktober 2026
+
+33 bidrag (#17–#47, #49 og #50) er gennemgået statisk mod `dce68ea`. Ingen kode fra bidragene er kørt. #48 og Dependabot-bidragene er ikke gennemgået. Brugeren besluttede:
+
+Arbejdsgang:
+- **Ét behov pr. bidrag.** Hvert bidrag genbaseres på `main`, når forgængeren er flettet, så diffen kun rummer sit eget behov. Bidrag, der ændrer sig ved genbasering, gennemgås igen.
+- **Testbevis står i bidragets beskrivelse**, ikke i repoet. `docs/contributions/`, `docs/images/<id>/`, bevisfiler i `docs/` og de fælles `verify-contribution-*.cjs` tages ud af grenene, og README linker ikke til bevis.
+- **Lister med én post pr. linje.** Listen over filer, appen må levere, står i `desktop/core/ui-files.cjs`, og kanalerne står i `desktop/preload.cjs`, begge i alfabetisk orden. Scripts og stilark i `desktop/ui/index.html` står én pr. linje i den rækkefølge, de skal indlæses, fordi senere scripts bruger tidligere. `tests/ui-files.test.cjs` fanger en UI-fil, der mangler i listen, og en liste ude af orden.
+
+Sessioner, fejl og genforsøg:
+- **Tre bindinger.** Samtykke, motoridentitet (forbindelse, model, skills og sandkasse) og genoptagelse af AI-sessionen afgøres hver for sig. Arbejdsmåde, plan og designstatus sendes med hver besked. Tilladelserne følger en OpenCode-agent pr. arbejdsmåde i samme session.
+- **Genforsøg ved forbigående fejl.** Gatewayen låser ikke længere et kald ved 408, 429 og 5xx, så OpenCodes egne genforsøg kommer igennem. Hvert forsøg tælles med i forbrug og pris. Det erstatter "Aura forsøger stadig aldrig igen af sig selv" under tredje milepæl.
+- **Plan efter fejl.** Fejler eller stoppes en byggeopgave, bevares planen og Byg, og Prøv igen bygger videre i Byg. En plan fra en afbrudt planlægning må stadig ikke bygges direkte. Det præciserer reglen om afbrudte planer.
+- Sessionen om hackathon-feedbacken bygger de tre punkter. #20, #41 og #42 lukkes, og brugbare dele genbruges med kreditering.
+
+Samtalen og Før du sender:
+- **En vedhæftning gælder én besked.** Valget ryddes efter afsendelse. Plan og planafklaring får filnavn og kontrolsum, ikke filteksten.
+- **Plusmenuen har to punkter:** Fil fra computeren (tekst, billede og PDF) og Referencemappe.
+- **Før du sender viser den præcise tekst ét sted** med almindelige navne. Kontrolsummer, revision og bytes ligger bag Se detaljer. Det viste er bundet til det sendte.
+- **Links i AI-svar kan klikkes** og viser adresse eller værtsnavn i selve teksten. Det erstatter det tidligere valg om ikke-klikbare links.
+- **Søgning i beskeder** har en knap i sidepanelet, også når det er foldet sammen, og findes i ⌘K.
+- **Kontekstmålingen** ligger i statuslinjens detaljer og regnes mod Auras grænse på 200.000 tokens. Første lag viser kun en advarsel nær grænsen.
+- **Modelstøtte** vises kun med udbyderens egne oplysninger. Appens egne observationer vises ikke som prøver.
+
+Design og udseende:
+- **Designmetoden fra #23 bliver en del af `harness-design-og-tilgaengelighed`.** Der kommer ingen ny skill, og design bliver ikke obligatorisk (#43 flettes ikke). Brugernes fravalg respekteres.
+- **Retning for stilarter:** Flere stilskills, fx minimalistisk, shadcn/Radix, Apple-inspireret og Material, som brugeren vælger mellem med forhåndsvisninger. Højst tre til fire vises først, med et anbefalet udgangspunkt forrest og resten bag Vælg en anden. Stilarterne bruger kun materiale med afklarede rettigheder.
+- **Udbyderlogoer** må stå ved modellen under skrivefeltet og på modelkortene. Alle bruger det fælles logosæt `desktop/ui/provider-*.svg` med samme størrelse og farveholdning. Ved OpenRouter vises forbindelsens logo.
+- **Tema følger systemet** med et valg under Indstillinger. Lyst og mørkt bygger på ét sæt farvetokens, og de mørke værdier skrives ind i `desktop/DESIGN.md`.
+- **Arbejdsstatus** vises som lyskant om skrivefeltet og som et lille mærke på forhåndsvisningen i Byg. Statusteksten står og læses op ét sted.
+
+Nøgler, godkendelser og pakning:
+- **Nøgler og GitHub-token indtastes kun i et separat vindue.** Hovedvinduet får en engangskvittering. Udgivs felt flyttes med. Nøglen renses og kontrolleres, før den gemmes. Knappen hedder Indtast nøgle.
+- **Godkend alt er et udtrykkeligt valg pr. samtale**, som også gælder over projektmappens grænse. Det får dansk navn og advarsel og bygges på den nye godkendelsesmodel, når kommandosandkassen er rettet. #45 flettes ikke i sin nuværende form.
+- **Pakning sker fra et committet kildetræ.** Pakken får et kildebevis med commit og kontrolsummer, som også dækker byggekonfiguration, entitlements og byggescripts. Signeringskvitteringen gemmes pr. bygning. `docs/udgivelse.md` får den nye rækkefølge.
+- **PDF-udtræk** må bruge `pdfjs-dist` (Apache-2.0). `@napi-rs/canvas` kommer kun med, hvis udtrækket påviseligt ikke virker uden.
+- **Indflettede kopier** ryddes fortsat automatisk. #24 flettes ikke.
+
+Valg i implementeringen, som kan ændres:
+- OneDrive og iCloud under `~/Library/CloudStorage` og `~/Library/Mobile Documents` kan bruges til vedhæftninger på Mac. Windows-stier normaliseres, før beskyttede mapper kontrolleres.
+- #19 tager kun rettelsen af spørgsmålenes levetid med. Spørgsmålsinstruksen for alle arbejdsmåder og skjulningen af resultatkortet udgår.
+- Versionsnummeret (#50) står i sidepanelet. Appvinduet maksimeres ikke ved start (#17).
+- Forhåndsvisningen genbruger projektets sidste port, når den er ledig, så sidens lokale data bevares.
+- Den engangsvise nulstilling af AI-sessioner samles i én udgivelse og nævnes i udgivelsesnoterne.
+- Dependabot #11 (OpenCode 1.19.3) venter på motorarbejdet, og roden og `desktop/runtime-lock.json` løftes sammen.
