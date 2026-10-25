@@ -102,6 +102,7 @@
     },
     {
       "id": "design",
+      "alwaysOn": true,
       "title": "Design og tilgængelighed",
       "summary": "Designpakker, logo og en side, som alle kan bruge.",
       "skills": [
