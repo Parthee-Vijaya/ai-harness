@@ -25,7 +25,7 @@ Billederne er taget i separate testprofiler. `verify-design-baseline.cjs` gengiv
 - **10 native kontroller**: opsætning, ingen designkontakt, IPC-fravalg, bevarede øvrige valg, genstart og ingen rendererfejl.
 - **7 transportforløb** gennem rigtig Workbench → OpenCode 1.18.33 → Mistral-/Corti-adapter → kontrolleret lokal HTTP-server. Første udgående kald indeholder den nøjagtige gennemgåede kerne. Plan/Byg/CLI, gammelt fravalg og almindelig chat er dækket.
 - Samme **7 transportforløb med hele skillen fra #23** består; det er den komplette metode, ikke den lille fixture.
-- Fuld desktop-suite: **520/522**. Samlet #23 + #43: **527/529** og **27/27 CLI-tests**. Begge har kun de samme to fejl i `approvals.test.cjs` (47 og 74), som er reproduceret på originalens uændrede `main` (**514/516**). Ingen tests er sprunget over.
+- Fuld desktop-suite: **520/522**. Samlet #23 + #43: **527/529** og **26/26 CLI-tests**. Begge har kun de samme to fejl i `approvals.test.cjs` (47 og 74), som er reproduceret på originalens uændrede `main` (**514/516**). Ingen tests er sprunget over.
 
 Dette er lokale tests på macOS Apple Silicon / Node 22.23.3. Transportprøverne bruger kontrollerede svar og dokumenterer indholdet af forespørgslen; de dokumenterer ikke en ekstern models visuelle kvalitet eller grøn GitHub CI.
 
