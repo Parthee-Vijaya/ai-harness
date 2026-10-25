@@ -689,8 +689,8 @@ Brugeren har bedt om en samlet UI/UX-gennemgang og klargøring før en pilot med
 33 bidrag (#17–#47, #49 og #50) er gennemgået statisk mod `dce68ea`. Ingen kode fra bidragene er kørt. #48 og Dependabot-bidragene er ikke gennemgået. Brugeren besluttede:
 
 Arbejdsgang:
-- **Ét behov pr. bidrag.** Hvert bidrag genbaseres på `main`, når forgængeren er flettet, så diffen kun rummer sit eget behov. Bidrag, der ændrer sig ved genbasering, gennemgås igen.
-- **Testbevis står i bidragets beskrivelse**, ikke i repoet. `docs/contributions/`, `docs/images/<id>/`, bevisfiler i `docs/` og de fælles `verify-contribution-*.cjs` tages ud af grenene, og README linker ikke til bevis.
+- **Bidragene er forslag.** Vi overtager selv arbejdet og bygger så meget som muligt af dem ind i vores egne milepæle, tilpasset beslutningerne nedenfor. Bidraget nævnes som kilde, når dets idé eller kode bruges. Bidragene flettes ikke direkte.
+- **Bidragenes bevismateriale tages ikke med:** `docs/contributions/`, `docs/images/<id>/`, bevisfiler i `docs/`, de fælles `verify-contribution-*.cjs` og README-links til bevis. Vi afprøver selv det, vi bygger ind.
 - **Lister med én post pr. linje.** Listen over filer, appen må levere, står i `desktop/core/ui-files.cjs`, og kanalerne står i `desktop/preload.cjs`, begge i alfabetisk orden. Scripts og stilark i `desktop/ui/index.html` står én pr. linje i den rækkefølge, de skal indlæses, fordi senere scripts bruger tidligere. `tests/ui-files.test.cjs` fanger en UI-fil, der mangler i listen, og en liste ude af orden.
 
 Sessioner, fejl og genforsøg:

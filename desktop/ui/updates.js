@@ -16,6 +16,9 @@
       unavailable: 'Denne udgave opdateres med en installationsfil.'
     };
     $('#updates-version').textContent = `Aura ${state.current}${state.channel === 'beta' ? ' · Beta' : ''}`;
+    // Den installerede version står under navnet i sidepanelet. Efter forslag i #50.
+    const prefix = document.createElement('span'); prefix.className = 'visually-hidden'; prefix.textContent = 'Version ';
+    $('#app-version').hidden = !state.current; $('#app-version').replaceChildren(...(state.current ? [prefix, state.current] : [])); $('#app-version').title = state.current ? `Version ${state.current}` : '';
     $('#updates-status').textContent = status[state.phase];
     $('#updates-error').textContent = state.error || '';
     $('#updates-warning').hidden = !state.warning;

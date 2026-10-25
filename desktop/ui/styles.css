@@ -1133,3 +1133,54 @@ kbd { font: 600 11px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif
 @media (prefers-reduced-motion: reduce) { .operation-spinner { animation: none; } }
 
 .composer-shortcut { margin: 0 14px 4px; color: var(--muted); font-size: 11px; line-height: 1.4; }
+
+/* Ældre beskeder og søgning i samtaler følger appens knapper og dialoger. */
+.history-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.history-controls .hint { margin: 0; color: var(--muted); font-size: 12px; }
+.history-search-dialog { width: min(760px, calc(100vw - 32px)); }
+.history-search-form { display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; align-items: end; }
+.history-search-form label, .history-search-form input { grid-column: 1 / -1; }
+.history-search-results { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 8px; }
+.history-search-result { display: grid; gap: 5px; width: 100%; text-align: left; white-space: normal; overflow-wrap: anywhere; }
+.history-search-result small { color: var(--muted); }
+.history-search-result mark { background: var(--tint); color: var(--accent); border-radius: 3px; padding: 0 2px; }
+.search-message-hit { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 6px; }
+@media (max-width: 600px) { .history-search-form { grid-template-columns: minmax(0, 1fr); } }
+
+/* Tabeller, kode og links i AI-svar. Brede tabeller ruller inde i svaret. */
+.markdown-table { max-width: 100%; overflow: auto; margin: 0 0 10px; }
+.markdown-table table { width: 100%; border-collapse: collapse; font-size: inherit; }
+.markdown-table th, .markdown-table td { border: 1px solid var(--line); padding: 6px 9px; text-align: left; vertical-align: top; min-width: 7ch; }
+.markdown-table th { font-weight: 650; background: var(--canvas); }
+.markdown-link { border: 0; background: none; padding: 0; color: var(--accent); font: inherit; text-decoration: underline; cursor: pointer; text-align: left; white-space: normal; overflow-wrap: anywhere; }
+.markdown-code { margin-bottom: 10px; display: grid; justify-items: end; }
+.markdown-code pre { justify-self: stretch; margin: 0; }
+.markdown-copy-code, .markdown-copy-answer { font-size: 11px; }
+
+/* Lyskant om skrivefeltet. Tilstanden kommer fra den åbne samtale (ChatDisplay.workState), aldrig fra en timer. */
+@property --work-edge-angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+#chat-form { position: relative; isolation: isolate; }
+#chat-form::before {
+  content: ''; position: absolute; inset: -3px; padding: 3px; border-radius: 16px; pointer-events: none; z-index: 2; opacity: 0;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask-composite: exclude;
+  background: conic-gradient(from var(--work-edge-angle), #8b8c9e 0deg, #e7e8f3 32deg, #8583ab 65deg, #c6dbe2 110deg, #7d82a1 155deg, #f5effa 194deg, #a6c6c2 237deg, #8f8ba9 278deg, #e9ecf3 322deg, #8b8c9e 360deg);
+}
+#chat-form[data-work-state="working"]::before { opacity: 1; animation: work-edge-flow 5s linear infinite; }
+#chat-form[data-work-state="quiet"]::before { opacity: .55; }
+@keyframes work-edge-flow { to { --work-edge-angle: 360deg; } }
+@media (prefers-reduced-motion: reduce) { #chat-form::before { animation: none !important; } }
+@media (forced-colors: active) {
+  #chat-form::before { display: none; }
+  #chat-form:is([data-work-state="working"], [data-work-state="quiet"]) { border-color: Highlight; }
+}
+
+/* Udbyderens logo ved den valgte model. Teksten bevares og kan bryde. */
+#model-chip, .model-choice .provider-brand-heading { display: flex; align-items: center; gap: 7px; }
+.provider-brand-icon { flex: 0 0 18px; width: 18px; height: 18px; object-fit: contain; }
+.provider-brand-label, .provider-brand-heading > span { min-width: 0; overflow-wrap: anywhere; }
+.model-choice .provider-brand-heading > span { margin-top: 0; font-size: inherit; color: inherit; }
+
+/* Versionsnummeret under navnet i sidepanelet. Et langt nummer forkortes, og hele står i title. */
+.brand-name { min-width: 0; display: grid; }
+.app-version { color: var(--muted); font-size: 11px; font-weight: 500; letter-spacing: 0; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.markdown-link-host { unicode-bidi: isolate; text-decoration: none; color: var(--muted); }

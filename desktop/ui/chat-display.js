@@ -34,7 +34,14 @@
     const received = view.receivedChars ? `${view.receivedChars.toLocaleString('da-DK')} tegn modtaget` : '';
     return { quiet: silence >= 15, text: silence >= 15 ? `Ingen nye signaler i ${silence} s. Du kan vente eller stoppe.` : received || 'Venter på svar fra AI’en.' };
   }
-  const api = { swatches, progress, phase };
+  // Lyskanten om skrivefeltet: den drejer, mens AI'en arbejder, og står stille, når der ikke kommer signaler.
+  // Venter opgaven på brugeren, er der ingen kant, så kortet med valget står alene. Efter forslag i #18.
+  function workState(view, now = Date.now()) {
+    if (!view.running) return 'idle';
+    if (view.waitingFor?.length) return 'waiting';
+    return progress(view, now).quiet ? 'quiet' : 'working';
+  }
+  const api = { swatches, progress, phase, workState };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.ChatDisplay = api;
 })(typeof window === 'undefined' ? globalThis : window);

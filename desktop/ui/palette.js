@@ -24,6 +24,7 @@
     { label: 'Stop opgaven', target: '#stop', words: ['afbryd', 'stop'], first: true },
     { label: 'Nyt projekt', target: '#new', words: ['opret', 'idé'] },
     { label: 'Åbn et projekt fra computeren', target: '#open', words: ['mappe', 'åbn'] },
+    { label: 'Søg i samtaler', target: '#history-search-open', words: ['søg', 'find', 'beskeder', 'historik'] },
     { label: 'AI-forbindelser', target: '#connections-button', words: ['udbyder', 'nøgle', 'api'] },
     { label: 'Funktioner', target: '#features-button', words: ['indstillinger', 'slå til', 'slå fra'] },
     { label: 'Projektets indstillinger', target: '#project-settings-button', words: ['tilladelser', 'godkendelser', 'automatisk', 'opstart', 'server', 'netværk'] },

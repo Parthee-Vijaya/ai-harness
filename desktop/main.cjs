@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, protocol, session, safeStorage, Menu, shell, webFrameMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, protocol, session, safeStorage, Menu, shell, webFrameMain, clipboard } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs/promises');
 const crypto = require('node:crypto');
@@ -346,6 +346,9 @@ handle('support:save', async () => {
 });
 // Feedback går på e-mail til kontakten i package.json. Uden kontakt viser appen kun teksten om at skrive til den, der inviterede.
 handle('support:contact', () => require('./core/feedback.cjs').contact());
+// Appen giver ikke siden adgang til udklipsholderen. Kopiering går gennem hovedprocessen og kun som tekst.
+handle('clipboard:write', text => { if (typeof text !== 'string' || text.length > 1_000_000) throw new Error('Teksten kan ikke kopieres.'); clipboard.writeText(text); return true; });
+handle('links:open', value => shell.openExternal(require('./core/external-links.cjs').externalURL(value)));
 handle('support:feedback', async () => {
   const feedback = require('./core/feedback.cjs'), person = feedback.contact();
   if (!person) return false;
@@ -367,6 +370,7 @@ handle('history:version', async commit => {
   const root = currentProject().root, version = await history.version(root, commit);
   return { ...version, images: await images.pairFor(root, { commit }) };
 });
+handle('history:search', value => require('./core/history-search.cjs').searchHistory(workbench.history, value));
 handle('history:rename', value => exclusive(async () => ({ name: await history.rename(requireIdleProject(), value?.commit, value?.name) })));
 handle('history:image', async id => {
   if (!currentProject()) throw new Error('Åbn et projekt først.');

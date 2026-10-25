@@ -21,7 +21,7 @@ function node(tag, text, className) { const el = document.createElement(tag); if
 // samtales visning står i siden med de faste id'er; de andre lever videre og opdateres af deres egne hændelser.
 const views = new Map();
 function makeView(id) {
-  const v = { id, log: node('div'), approvals: node('div'), review: node('section', undefined, 'journey-card'), roles: new Map(), parts: new Map(), partTypes: new Map(), assistantText: new Map(), pendingMarkdown: new Set(), activityGroup: null, lastSentText: '', lastTarget: '', lastTargetRef: null, lastCheckpoint: null, rejectedThisRun: false, lastRejection: null, running: false, runStartedAt: 0, runLabel: '', statusDetail: '', waitingFor: [], plan: null, planCard: false, unread: false, draft: null, followChat: true, scrollTop: 0, lastSignalAt: 0, receivedChars: 0 };
+  const v = { id, historyPending: [], historyLoaded: false, historyNotice: '', unfinishedParts: new Set(), log: node('div'), approvals: node('div'), review: node('section', undefined, 'journey-card'), roles: new Map(), parts: new Map(), partTypes: new Map(), assistantText: new Map(), pendingMarkdown: new Set(), activityGroup: null, lastSentText: '', lastTarget: '', lastTargetRef: null, lastCheckpoint: null, rejectedThisRun: false, lastRejection: null, running: false, runStartedAt: 0, runLabel: '', statusDetail: '', waitingFor: [], plan: null, planCard: false, unread: false, draft: null, followChat: true, scrollTop: 0, lastSignalAt: 0, receivedChars: 0 };
   v.log.setAttribute('aria-live', 'polite'); v.review.hidden = true; v.review.setAttribute('aria-live', 'polite');
   if (id) views.set(id, v);
   return v;
@@ -31,7 +31,7 @@ view.log = document.getElementById('messages'); view.approvals = document.getEle
 const viewFor = id => !id ? view : views.get(id) || makeView(id);
 // Den åbne samtales visning sættes i siden. Status, plan og knapper følger den.
 function mountView(v) {
-  if (view !== v) view.scrollTop = $('#chat-content').scrollTop;
+  if (view !== v) { view.scrollTop = $('#chat-content').scrollTop; view.historyNotice = ''; }
   for (const [key, id] of [['log', 'messages'], ['approvals', 'approvals'], ['review', 'run-review']]) {
     const old = document.getElementById(id); if (old === v[key]) continue;
     old.removeAttribute('id'); v[key].id = id; old.replaceWith(v[key]);
@@ -42,7 +42,7 @@ function mountView(v) {
   requestAnimationFrame(() => { if (view !== v) return; $('#chat-content').scrollTop = v.followChat ? $('#chat-content').scrollHeight : v.scrollTop; updateChatScroll(); }); v.unread = false; running = v.running; activePlan = v.plan;
   $('#plan-card').hidden = !v.planCard || !v.plan;
   updatePlanOffer(v);
-  applyRunning();
+  applyRunning(); renderHistoryControls();
 }
 const anyRunning = () => running || [...views.values()].some(v => v.running);
 // En samtales navn, som sidepanelet viser det.
@@ -91,51 +91,22 @@ async function saveChatDraft(required = false) {
   catch { if (current?.root === root && view.id === chat) $('#draft-status').textContent = 'Kladden kunne ikke gemmes. Kopiér teksten, før du lukker.'; if (required === true) throw new Error('Kladden kunne ikke gemmes. Kopiér teksten, før du opdaterer.'); }
 }
 function option(value, label) { const el = node('option', label); el.value = value; return el; }
-// AI'ens svar er markdown. Vi viser overskrifter, fed og kursiv tekst, kode, lister og skillelinjer, men bygger kun
-// elementer med textContent, så modellens tekst aldrig bliver til HTML. Links vises som tekst og kan ikke klikkes.
-function inlineMarkdown(target, text) {
-  const pattern = /(\*\*([^*]+)\*\*|`([^`]+)`|\*([^*\s][^*]*)\*|\[([^\]]+)\]\(([^)\s]+)\))/g;
-  let last = 0, match;
-  while ((match = pattern.exec(text))) {
-    if (match.index > last) target.append(text.slice(last, match.index));
-    if (match[2] !== undefined) target.append(node('strong', match[2]));
-    else if (match[3] !== undefined) target.append(node('code', match[3]));
-    else if (match[4] !== undefined) target.append(node('em', match[4]));
-    else target.append(`${match[5]} (${match[6]})`);
-    last = pattern.lastIndex;
-  }
-  if (last < text.length) target.append(text.slice(last));
-}
-function markdownInto(element, text) {
-  const blocks = [], lines = window.ConversationMode.visible(text).replace(/\r\n/g, '\n').split('\n');
-  let paragraph = null, list = null, code = null;
-  const close = () => { paragraph = null; list = null; };
-  for (const line of lines) {
-    if (code) { if (/^\s*```/.test(line)) code = null; else code.textContent += (code.textContent ? '\n' : '') + line; continue; }
-    if (/^\s*```/.test(line)) { close(); const pre = node('pre'); code = node('code'); pre.append(code); blocks.push(pre); continue; }
-    if (!line.trim()) { close(); continue; }
-    const heading = /^\s{0,3}#{1,6}\s+(.*)$/.exec(line);
-    if (heading) { close(); const h = node('h4'); inlineMarkdown(h, heading[1].replace(/\s+#+\s*$/, '')); blocks.push(h); continue; }
-    if (/^\s{0,3}([-*_])(\s*\1){2,}\s*$/.test(line)) { close(); blocks.push(node('hr')); continue; }
-    const item = /^\s*(?:[-*+]|(\d+)[.)])\s+(.*)$/.exec(line);
-    if (item) {
-      const tag = item[1] ? 'ol' : 'ul';
-      if (!list || list.tagName.toLowerCase() !== tag) { paragraph = null; list = node(tag); blocks.push(list); }
-      const li = node('li'); inlineMarkdown(li, item[2]); list.append(li); continue;
-    }
-    list = null;
-    if (!paragraph) { paragraph = node('p'); blocks.push(paragraph); } else paragraph.append(node('br'));
-    inlineMarkdown(paragraph, line);
-  }
-  element.classList.add('markdown'); element.replaceChildren(...blocks);
-  // Stier til filer i projektet bliver til links, der åbner filen under Kode.
-  window.ChatDisplay.swatches(element);
-  window.workspace?.linkify(element);
+// AI'ens svar er markdown og vises med ui/markdown.js uden at blive til HTML. Kopiknapperne kommer, når svaret er
+// færdigt, og et link åbnes kun i browseren, efter at hovedprocessen har godkendt adressen.
+function markdownInto(element, text, complete = true) {
+  window.MarkdownView.render(element, text, {
+    complete,
+    visible: value => window.ConversationMode.visible(value),
+    copy: element.classList.contains('assistant') ? (value, button) => copyText(value, button) : undefined,
+    openLink: url => action(() => call('openExternalLink', { url })),
+    // Stier til filer i projektet bliver til links, der åbner filen under Kode.
+    decorate: target => { window.ChatDisplay.swatches(target); window.workspace?.linkify(target); }
+  });
 }
 // Under streaming gemmes den rå tekst, og visningen opdateres højst én gang pr. skærmopdatering.
 function showAssistant(id, text, v = view) {
   v.assistantText.set(id, text); partElement(id, 'assistant', v);
-  if (!v.pendingMarkdown.size) requestAnimationFrame(() => { for (const part of v.pendingMarkdown) markdownInto(partElement(part, 'assistant', v), v.assistantText.get(part)); v.pendingMarkdown.clear(); });
+  if (!v.pendingMarkdown.size) requestAnimationFrame(() => { for (const part of v.pendingMarkdown) { markdownInto(partElement(part, 'assistant', v), v.assistantText.get(part), !v.running); if (v.running) v.unfinishedParts.add(part); else v.unfinishedParts.delete(part); } v.pendingMarkdown.clear(); });
   v.pendingMarkdown.add(id);
 }
 function appendMessage(text, role = 'assistant', v = view) {
@@ -400,7 +371,15 @@ async function displayProject(project, { firstTask = false } = {}) {
 // beskederne skal vises fra den gemte samtale; ellers står de allerede i samtalens visning.
 function fillChat(next, fresh) {
   const history = next.workspace, v = view;
-  if (fresh) for (const item of history?.messages || []) appendMessage(item.text, item.role);
+  // En tom visning, som en hændelse oprettede, før samtalen blev åbnet, skal også hente de gemte beskeder og planen.
+  fresh = window.HistoryPages.needsRestore(fresh, v);
+  if (fresh) {
+    // Kun den nyeste side tegnes; ældre beskeder hentes med knappen over samtalen.
+    const page = window.HistoryPages.takePrevious(history?.messages || []);
+    Object.assign(v, { historyPending: page.older, historyLoaded: true, historyNotice: '' });
+    for (const item of page.recent) storedMessage(item, v);
+  }
+  renderHistoryControls();
   const empty = !v.log.children.length;
   $('#project-intro').hidden = !empty; $('#start-idea').hidden = !empty;
   $('#resume-notice').hidden = !history?.messages?.length && !next.historyWarning; $('#resume-notice').open = false;
@@ -722,8 +701,9 @@ function showData(data, canSend) {
   $('#accept-send').hidden = !canSend; $('#data-dialog').showModal();
 }
 async function sendNow(data, text) {
-  const v = view, owner = selectedOwner(); v.activityGroup = null; v.planCard = false; v.runConnection = $('#connection-select').value;
+  const v = view, owner = selectedOwner(); v.activityGroup = null; v.planCard = false; v.runConnection = $('#connection-select').value; v.historyNotice = ''; renderHistoryControls();
   v.activeModelSummary = $('#model-chip').textContent;
+  v.activeModelBrand = { kind: state?.connections.find(c => c.id === v.runConnection)?.kind, modelID: $('#model-select').value };
   $('#model-options').open = false; $('#task-dialog').close(); $('#connection-warning').hidden = true; $('#data-dialog').close(); setRunning(true, 'Starter agent …');
   if ($('#work-mode').value === 'free') { activePlan = null; $('#plan-card').hidden = true; }
   $('#run-review').hidden = true; if ($('#work-mode').value === 'build') $('#plan-card').hidden = true; if ($('#work-mode').value === 'plan') { activePlan = null; $('#plan-card').hidden = true; }
@@ -752,12 +732,15 @@ function renderStatus() {
   $('#agent-progress').textContent = progress.text; $('#agent-progress').hidden = waiting;
   $('#agent-activity').classList.toggle('is-quiet', progress.quiet && !waiting);
   $('#chat-form').setAttribute('aria-busy', String(v.running));
+  $('#chat-form').dataset.workState = window.ChatDisplay.workState(v);
   if (v.running) $('#run-status').textContent = waiting ? 'Venter på dig' : `${v.runLabel} ${elapsedText(Date.now() - v.runStartedAt)}`;
 }
 $('#agent-activity-jump').onclick = () => { const item = view.waitingFor[0]; if (!item?.element?.isConnected) return; item.element.scrollIntoView({ block: 'nearest' }); item.element.querySelector('button, textarea, input')?.focus(); };
 function setRunning(value, status, v = view) {
   if (value && !v.running) { v.runStartedAt = Date.now(); v.lastSignalAt = v.runStartedAt; v.receivedChars = 0; v.modelProgress = null; v.todos = []; }
   if (!value) v.waitingFor = [];
+  // Når opgaven er færdig, får de svar, der blev tegnet undervejs, deres kopiknapper. Ældre svar røres ikke.
+  if (!value && v.running) { for (const id of v.unfinishedParts) if (v.parts.has(id)) markdownInto(v.parts.get(id), v.assistantText.get(id), true); v.unfinishedParts.clear(); }
   v.running = value; v.runLabel = status;
   if (value) v.statusDetail = status.startsWith('Starter') ? 'Aura starter AI’en …' : $('#work-mode').value === 'plan' ? 'Venter på modellens forslag …' : 'Venter på modellen …';
   if (v === view) { running = value; $('#run-status').textContent = status; updateModelSummary(); }
@@ -806,7 +789,8 @@ function noteTool(id, v = view) {
   v.activityGroup.firstChild.textContent = `AI’en har brugt ${count} ${count === 1 ? 'værktøj' : 'værktøjer'}.`;
 }
 function partElement(id, role, v = view) {
-  if (!v.parts.has(id)) v.parts.set(id, appendMessage('', role, v));
+  // Et AI-svar gemmes med delens id, så søgningen også kan finde svar fra den igangværende session.
+  if (!v.parts.has(id)) { const element = appendMessage('', role, v); if (role === 'assistant') element.dataset.messageId = id; v.parts.set(id, element); }
   return v.parts.get(id);
 }
 // Hændelser fra en samtales opgave vises i dens egen visning, også når en anden samtale er åben.
@@ -1024,7 +1008,9 @@ function updateModelSummary() {
   $('#model-effort').hidden = !chosen; $('#model-effort-text').textContent = chosen ? `Du har valgt ${chosen} indsats i denne samtale.` : '';
   const label = model.value ? [model.selectedOptions[0].textContent, provider, effortLabel].filter(Boolean).join(' · ') : 'Vælg AI';
   $('#model-summary').textContent = model.value ? model.selectedOptions[0].textContent : 'Vælg din AI';
-  $('#model-chip').textContent = view.running && view.activeModelSummary ? view.activeModelSummary : label;
+  // En kørende samtale viser den model, opgaven blev sendt med, også hvis næste model allerede er valgt.
+  const sent = view.running && view.activeModelSummary;
+  window.ProviderBrand.decorate($('#model-chip'), sent ? { ...view.activeModelBrand, label: view.activeModelSummary } : { kind: connection?.kind, modelID: model.value, label });
   $('#model-chip').title = chosen ? `Du har valgt ${chosen} indsats i denne samtale. Klik for at skifte model eller indsats.` : effort ? `${effort[0].toUpperCase()}${effort.slice(1)} indsats er udbyderens standard for modellen. Klik for at skifte model.` : connection?.kind === 'mistral' ? 'Aura sender ikke et valg af indsats. Mistrals standard gælder; niveauet er ikke verificeret. Klik for at skifte model eller forbindelse.' : 'Klik for at skifte model eller forbindelse.';
   $('#connection-status').textContent = model.value ? (state?.connections.find(c => c.id === $('#connection-select').value)?.name || 'Valgt forbindelse') + ' · ' + model.value : 'Ingen model valgt';
 }
@@ -1291,7 +1277,7 @@ function toolsStep(step) {
 const toolById = id => toolsCatalog.tools.find(tool => tool.id === id);
 async function copyText(text, button) {
   const label = button.textContent;
-  try { await navigator.clipboard.writeText(text); button.textContent = 'Kopieret'; } catch { button.textContent = 'Kunne ikke kopiere'; }
+  try { await call('clipboardWrite', text); button.textContent = 'Kopieret'; } catch { button.textContent = 'Kunne ikke kopiere'; }
   setTimeout(() => { button.textContent = label; }, 1800);
 }
 function toolCard(tool) {
@@ -1589,7 +1575,10 @@ function renderShortlist() {
   $('#model-shortlist').replaceChildren();
   for (const { model, text } of picks) {
     const button = node('button', undefined, 'model-choice'); button.type = 'button'; button.dataset.model = model.id;
-    button.append(node('strong', model.name), node('span', text));
+    const heading = node('strong', undefined, 'provider-brand-heading'), logo = window.ProviderBrand.icon(kind, document);
+    if (logo) heading.append(logo);
+    heading.append(node('span', model.name));
+    button.append(heading, node('span', text));
     // Et klik vælger modellen og lukker dialogen. Kun OpenRouter kræver bagefter et valg af udbyder.
     button.onclick = () => action(async () => {
       if ($('#model-select').value !== model.id) view.effort = null;
@@ -1745,7 +1734,8 @@ function renderRunReview(result, v = view) {
     const lower = long && v.effort !== 'low' && (v.effortLevels || []).includes('low');
     if (lower) actions.append(reviewButton('Prøv igen med lav indsats', () => { v.effort = 'low'; updateModelSummary(); again(); }, true));
     // En lang samtale gøres kortere, før beskeden sendes igen. Planen og filerne bevares.
-    if (long && v.log.querySelectorAll('.chat-message.user').length > 1) actions.append(reviewButton('Gør samtalen kortere og prøv igen', () => { v.compactNext = true; again(); }, !lower));
+    // Ældre beskeder, der endnu ikke er vist, tæller også med.
+    if (long && v.log.querySelectorAll('.chat-message.user').length + v.historyPending.filter(item => item.role === 'user').length > 1) actions.append(reviewButton('Gør samtalen kortere og prøv igen', () => { v.compactNext = true; again(); }, !lower));
     actions.append(reviewButton('Prøv igen', again, !actions.children.length));
     box.append(actions); return;
   }
@@ -1847,3 +1837,61 @@ $('#support-feedback').onclick = () => action(() => call('supportFeedback'));
 
 // Udgiv forbinder komplai Run fra sin egen dialog; appens funktioner følger med.
 window.addEventListener('harness:komplai-connected', () => action(async () => { state = await call('connectionState'); renderConnections(); applyFeatures(); }));
+
+// Ældre gemte beskeder hentes en side ad gangen fra denne computer. Det starter ingen AI-opgave.
+const beskeder = n => `${n} tidligere ${n === 1 ? 'besked' : 'beskeder'}`;
+function renderHistoryControls() {
+  const next = view.historyPending.length ? window.HistoryPages.takePrevious(view.historyPending).recent.length : 0;
+  $('#history-load').hidden = !next; $('#history-load').textContent = `Vis ${beskeder(next)}`;
+  $('#history-load-status').textContent = view.historyNotice;
+}
+// En gemt besked tegnes med sit id, så et søgetræf kan finde den igen.
+function storedMessage(item, v) {
+  const element = appendMessage(item.text, item.role, v);
+  if (typeof item.id === 'string') element.dataset.messageId = item.id;
+  return element;
+}
+// Henter næste side ældre beskeder ind over samtalen og bevarer læsepositionen.
+function showOlderMessages(v = view) {
+  const container = $('#chat-content'), height = container.scrollHeight, top = container.scrollTop;
+  const page = window.HistoryPages.takePrevious(v.historyPending); if (!page.recent.length) return false;
+  const fragment = document.createDocumentFragment();
+  for (const item of page.recent) storedMessage(item, { log: fragment });
+  // Skærmlæsere skal kun have statuslinjen læst op, ikke hele den hentede side. Loggen er derfor ikke levende,
+  // indtil browseren har opdateret tilgængelighedstræet efter indsættelsen.
+  v.log.setAttribute('aria-live', 'off'); v.log.prepend(fragment);
+  requestAnimationFrame(() => requestAnimationFrame(() => v.log.setAttribute('aria-live', 'polite')));
+  v.followChat = false; v.historyPending = page.older;
+  v.historyNotice = `${beskeder(page.recent.length)} vist fra denne computer.${page.older.length ? ` ${page.older.length} mere gemt.` : ''}`;
+  renderHistoryControls();
+  const position = top + container.scrollHeight - height; container.scrollTop = position; v.scrollTop = position;
+  requestAnimationFrame(() => { if (view === v) { container.scrollTop = position; v.scrollTop = position; updateChatScroll(); } });
+  return true;
+}
+$('#history-load').onclick = () => { if (showOlderMessages() && !view.historyPending.length) $('#history-load-status').focus({ preventScroll: true }); };
+
+// Et søgetræf åbner den gemte samtale og viser beskeden. Det sendes ikke til AI'en. Efter forslag i #28.
+window.openStoredMessage = async result => {
+  if (!result || !/^[a-f0-9]{64}$/.test(result.project || '') || !/^[a-f0-9-]{36}$/.test(result.chat || '') || typeof result.message !== 'string' || result.message.length > 200) throw new Error('Vælg et aktuelt søgetræf.');
+  const project = window.chats.projects().find(item => item.id === result.project);
+  if (!project) throw new Error('Projektet findes ikke længere. Søg igen.');
+  try { await saveChatDraft(true); } catch { throw new Error('Kladden kunne ikke gemmes. Kopiér teksten, før du åbner en anden samtale.'); }
+  await window.chats.openChat(project, result.chat);
+  if (current?.root !== project.root || view.id !== result.chat) throw new Error('Samtalen blev ikke åbnet. Vælg træffet igen.');
+  const v = view, find = () => [...v.log.children].find(element => element.dataset?.messageId === result.message);
+  // Ældre sider hentes, indtil beskeden står i samtalen.
+  while (!find() && v.historyPending.some(item => item.id === result.message) && showOlderMessages(v));
+  // En brugerbesked fra den igangværende session har intet id endnu; den kendes på træffets tekst.
+  if (!find() && result.role === 'user' && result.excerpt) {
+    const excerpt = result.excerpt.normalize('NFC'), match = [...v.log.querySelectorAll('.chat-message.user:not([data-message-id])')].reverse().find(element => element.textContent.normalize('NFC').includes(excerpt));
+    if (match) match.dataset.messageId = result.message;
+  }
+  // Samtalen bygges aldrig om her, så linjer, der kun står i den åbne visning, bevares.
+  const target = find(); if (!target) throw new Error('Samtalen er åbnet, men beskeden kan ikke markeres. Rul op for at finde den.');
+  for (const element of v.log.querySelectorAll('.search-message-hit')) element.classList.remove('search-message-hit');
+  v.followChat = false; target.classList.add('search-message-hit'); target.tabIndex = -1;
+  target.scrollIntoView({ block: 'center', behavior: 'auto' }); target.focus({ preventScroll: true });
+  // Hentede sider genopretter læsepositionen ved næste skærmopdatering; træffet rulles frem efter dem.
+  requestAnimationFrame(() => { if (view === v && target.isConnected) { target.scrollIntoView({ block: 'center', behavior: 'auto' }); v.followChat = false; updateChatScroll(); } });
+  return target;
+};
