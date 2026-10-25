@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "scenario": "skill",
+  "label": "after",
+  "checks": [
+    "Primary design method available in existing editor"
+  ],
+  "sizes": [],
+  "errors": []
+}

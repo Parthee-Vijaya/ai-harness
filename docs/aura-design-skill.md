@@ -42,3 +42,7 @@ Kildens `brand_scan.py` og `qa.py` medfølger ikke: de kan henholdsvis hente vil
 ## Afprøvning
 
 Se [bidragets før/eftervisninger, prøver og begrænsninger](contributions/aura-design-pr.md). Der er ingen ny installationspakke, release eller hosted CI-kørsel i dette bidrag.
+
+## Første udkast
+
+Typografi, farver, afstande, ikoner og responsivt layout indgår i det første forslag. En kort bestilling giver et begrundet designforslag inden for eksisterende godkendt design og plan. Skillen lover ikke ens visuel kvalitet på tværs af modeller. Altid aktiv grundpakke og automatisk aktivering håndteres særskilt i PR #43.

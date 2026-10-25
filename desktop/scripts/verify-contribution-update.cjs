@@ -39,6 +39,8 @@ const output = path.join(process.env.AURA_REVIEW_OUTPUT || path.join(os.tmpdir()
         await page.evaluate(()=>document.querySelector('#skills-button').click());
         await page.waitForSelector('#skills-dialog[open]');await page.selectOption('#skill-select','harness-aura-design');
         check('Primary design method available in existing editor',/Fra én sætning/.test(await page.inputValue('#skill-content')));await shot('instructions');
+        await page.locator('#skill-content').evaluate(el=>{ el.focus(); const at=el.value.indexOf('## 3.'); el.setSelectionRange(at,at); el.scrollTop=el.scrollHeight*at/el.value.length; });
+        await shot('first-draft');
       } else if(scenario==='materials') {
         await page.fill('#prompt','Brug den vedhæftede beskrivelse som kontekst.');
         if(await page.locator('#chat-materials-plus').count()) {
@@ -61,5 +63,5 @@ const output = path.join(process.env.AURA_REVIEW_OUTPUT || path.join(os.tmpdir()
     }
     assert.deepEqual(errors,[]);await fs.writeFile(path.join(output,'result.json'),JSON.stringify({passed:true,scenario,label,checks,sizes,errors},null,2));
     console.log(JSON.stringify({passed:true,label,checks:checks.length,output}));
-  } finally { if(app)await app.close();await fs.rm(root,{recursive:true,force:true}); }
+  } finally { if(app)await app.close();await fs.rm(path.join(root,'profile'),{recursive:true,force:true}); }
 })().catch(e=>{console.error(e);process.exitCode=1});
