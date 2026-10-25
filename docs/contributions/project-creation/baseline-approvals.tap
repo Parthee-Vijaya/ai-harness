@@ -1,0 +1,59 @@
+TAP version 13
+# Subtest: filændringens diff fra OpenCode tælles og vises uden filhoveder
+ok 1 - filændringens diff fra OpenCode tælles og vises uden filhoveder
+  ---
+  duration_ms: 0.683583
+  type: 'test'
+  ...
+# Subtest: kommandoer får et gæt i almindeligt dansk, og afslutningskoden afgør resultatet
+ok 2 - kommandoer får et gæt i almindeligt dansk, og afslutningskoden afgør resultatet
+  ---
+  duration_ms: 0.715666
+  type: 'test'
+  ...
+# Subtest: modelserverens fejl får en type, så appen kan vise den rigtige vej videre
+ok 3 - modelserverens fejl får en type, så appen kan vise den rigtige vej videre
+  ---
+  duration_ms: 40.031084
+  type: 'test'
+  ...
+# Subtest: afvisning med en besked sendes til motoren og stopper ikke; Stop giver et resultatkort med det, AI’en nåede
+not ok 4 - afvisning med en besked sendes til motoren og stopper ikke; Stop giver et resultatkort med det, AI’en nåede
+  ---
+  duration_ms: 17.050708
+  type: 'test'
+  location: '/Users/parthee/Library/Application Support/Aura1/WorkingCopies/upstream-f20-baseline/desktop/tests/approvals.test.cjs:47:1'
+  failureType: 'testCodeFailure'
+  error: 'Godkendelsen findes ikke længere.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ChatSession.reply (/Users/parthee/Library/Application Support/Aura1/WorkingCopies/upstream-f20-baseline/desktop/core/chat-session.cjs:659:68)
+    Workbench.reply (/Users/parthee/Library/Application Support/Aura1/WorkingCopies/upstream-f20-baseline/desktop/core/workbench.cjs:306:178)
+    TestContext.<anonymous> (/Users/parthee/Library/Application Support/Aura1/WorkingCopies/upstream-f20-baseline/desktop/tests/approvals.test.cjs:54:15)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: godkendelsen får værktøjets egne oplysninger med, og en fejl fra OpenCode får en type
+not ok 5 - godkendelsen får værktøjets egne oplysninger med, og en fejl fra OpenCode får en type
+  ---
+  duration_ms: 9.190166
+  type: 'test'
+  location: '/Users/parthee/Library/Application Support/Aura1/WorkingCopies/upstream-f20-baseline/desktop/tests/approvals.test.cjs:74:1'
+  failureType: 'testCodeFailure'
+  error: "Cannot read properties of undefined (reading 'properties')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (/Users/parthee/Library/Application Support/Aura1/WorkingCopies/upstream-f20-baseline/desktop/tests/approvals.test.cjs:82:26)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 3
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 209.751292

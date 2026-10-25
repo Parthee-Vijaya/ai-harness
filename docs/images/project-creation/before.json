@@ -1,0 +1,9 @@
+{
+  "expectedRegression": true,
+  "checks": [
+    "Version history is enabled",
+    "Normal creation includes Git",
+    "Baseline reproduces the creation race"
+  ],
+  "errors": []
+}
