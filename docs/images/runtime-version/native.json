@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "version": "0.6.0-beta.1",
+  "checks": [
+    "Three labels show the exact running version",
+    "Version uses existing read-only IPC state",
+    "Project creation still works",
+    "No AI task or approval was started",
+    "Collapsed navigation hides version with brand text",
+    "Version remains inside the sidebar at smaller size",
+    "Version survives restart of the renderer",
+    "No renderer errors"
+  ],
+  "errors": [],
+  "externalModelCalls": 0
+}
