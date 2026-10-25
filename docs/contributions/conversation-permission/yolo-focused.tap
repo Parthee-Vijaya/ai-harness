@@ -1,0 +1,220 @@
+TAP version 13
+# Subtest: eksisterende projekter får ingen automatisk adgang; projektfiler kan slås til og fra og huskes efter genåbning
+ok 1 - eksisterende projekter får ingen automatisk adgang; projektfiler kan slås til og fra og huskes efter genåbning
+  ---
+  duration_ms: 11.560375
+  type: 'test'
+  ...
+# Subtest: projektets filregel omfatter aldrig søskendemapper, hemmeligheder, links ud af projektet eller planning
+ok 2 - projektets filregel omfatter aldrig søskendemapper, hemmeligheder, links ud af projektet eller planning
+  ---
+  duration_ms: 13.421666
+  type: 'test'
+  ...
+# Subtest: faktiske mapper med store bogstaver kan ikke få automatisk eller husket filadgang
+ok 3 - faktiske mapper med store bogstaver kan ikke få automatisk eller husket filadgang
+  ---
+  duration_ms: 4.941542
+  type: 'test'
+  ...
+# Subtest: tilladelse til opgaven deler kun projektfiler og ophører med opgavens Set
+ok 4 - tilladelse til opgaven deler kun projektfiler og ophører med opgavens Set
+  ---
+  duration_ms: 3.469416
+  type: 'test'
+  ...
+# Subtest: kommandoer matches fuldt sammen med den kanoniske arbejdsmappe, og kan tilbagekaldes
+ok 5 - kommandoer matches fuldt sammen med den kanoniske arbejdsmappe, og kan tilbagekaldes
+  ---
+  duration_ms: 5.429792
+  type: 'test'
+  ...
+# Subtest: ændrede input og linkmål ændrer fingeraftryk og godkendelsesgruppe
+ok 6 - ændrede input og linkmål ændrer fingeraftryk og godkendelsesgruppe
+  ---
+  duration_ms: 2.79825
+  type: 'test'
+  ...
+# Subtest: en platform uden kommandoisolation tilbyder kun enkeltgodkendelse, også ved en tidligere gemt regel
+ok 7 - en platform uden kommandoisolation tilbyder kun enkeltgodkendelse, også ved en tidligere gemt regel
+  ---
+  duration_ms: 3.288417
+  type: 'test'
+  ...
+# Subtest: lokale kommandoer kræver opt-in og en faktisk isoleret motor; aldrig planning, eksternt cwd eller andre værktøjer
+ok 8 - lokale kommandoer kræver opt-in og en faktisk isoleret motor; aldrig planning, eksternt cwd eller andre værktøjer
+  ---
+  duration_ms: 6.534333
+  type: 'test'
+  ...
+# Subtest: hjemmesidetilladelsen gælder præcis origin uden at omfatte lookalike, anden port eller adgangskoder
+ok 9 - hjemmesidetilladelsen gælder præcis origin uden at omfatte lookalike, anden port eller adgangskoder
+  ---
+  duration_ms: 4.168125
+  type: 'test'
+  ...
+# Subtest: en valgt overordnet mappe dækker undermapper men ikke søskende, andre adgangstyper eller linkflugt
+ok 10 - en valgt overordnet mappe dækker undermapper men ikke søskende, andre adgangstyper eller linkflugt
+  ---
+  duration_ms: 9.085375
+  type: 'test'
+  ...
+# Subtest: gemt mappeadgang afvises, hvis selve mappen udskiftes med et symlink
+ok 11 - gemt mappeadgang afvises, hvis selve mappen udskiftes med et symlink
+  ---
+  duration_ms: 3.329541
+  type: 'test'
+  ...
+# Subtest: hverken generel tmp-, home-, filsystem- eller opencode-adgang kan gemmes som mappe
+ok 12 - hverken generel tmp-, home-, filsystem- eller opencode-adgang kan gemmes som mappe
+  ---
+  duration_ms: 2.46225
+  type: 'test'
+  ...
+# Subtest: kun Auras konkrete scratchmappe giver automatisk filadgang, aldrig bash eller skrivning under planning
+ok 13 - kun Auras konkrete scratchmappe giver automatisk filadgang, aldrig bash eller skrivning under planning
+  ---
+  duration_ms: 5.316458
+  type: 'test'
+  ...
+# Subtest: UI grupperer kun efter hovedprocessens nøgle og samler kvitteringer med antal
+ok 14 - UI grupperer kun efter hovedprocessens nøgle og samler kvitteringer med antal
+  ---
+  duration_ms: 0.174584
+  type: 'test'
+  ...
+# Subtest: metadata skjuler ikke relative patterns eller eksterne og beskyttede mål i en patch
+ok 15 - metadata skjuler ikke relative patterns eller eksterne og beskyttede mål i en patch
+  ---
+  duration_ms: 11.340875
+  type: 'test'
+  ...
+# Subtest: OpenCodes relative edit/write-patterns bindes entydigt til de absolutte værktøjsmål
+ok 16 - OpenCodes relative edit/write-patterns bindes entydigt til de absolutte værktøjsmål
+  ---
+  duration_ms: 13.289708
+  type: 'test'
+  ...
+# Subtest: OpenCodes apply_patch-visningsliste erstatter aldrig metadata.files eller patchens flyttemål
+ok 17 - OpenCodes apply_patch-visningsliste erstatter aldrig metadata.files eller patchens flyttemål
+  ---
+  duration_ms: 3.318542
+  type: 'test'
+  ...
+# Subtest: Windows afviser automatisk isolation uden usikret reservevej
+ok 18 - Windows afviser automatisk isolation uden usikret reservevej
+  ---
+  duration_ms: 0.418917
+  type: 'test'
+  ...
+# Subtest: betroet plugin wrapper bash, validerer cwd og viser kun faste pakkehosts
+ok 19 - betroet plugin wrapper bash, validerer cwd og viser kun faste pakkehosts
+  ---
+  duration_ms: 130.401209
+  type: 'test'
+  ...
+# Subtest: rigtig OS-isolation tillader projektarbejde og spærrer hemmeligheder, andre mapper, symlinks og arvede nøgler
+ok 20 - rigtig OS-isolation tillader projektarbejde og spærrer hemmeligheder, andre mapper, symlinks og arvede nøgler
+  ---
+  duration_ms: 255.957334
+  type: 'test'
+  ...
+# Subtest: rigtig netværksisolation afviser net uden for pakkeregistrene og direkte loopback
+ok 21 - rigtig netværksisolation afviser net uden for pakkeregistrene og direkte loopback
+  ---
+  duration_ms: 374.612875
+  type: 'test'
+  ...
+# Subtest: npm installerer en fast pakke i projektet gennem det tilladte register
+ok 22 - npm installerer en fast pakke i projektet gennem det tilladte register
+  ---
+  duration_ms: 679.688958
+  type: 'test'
+  ...
+# Subtest: pakkens installationsscript og underprocesser har samme filgrænse
+ok 23 - pakkens installationsscript og underprocesser har samme filgrænse
+  ---
+  duration_ms: 546.68625
+  type: 'test'
+  ...
+# Subtest: a command prepared before session consent is isolated when executed after activation
+ok 24 - a command prepared before session consent is isolated when executed after activation
+  ---
+  duration_ms: 384.268625
+  type: 'test'
+  ...
+# Subtest: explicit acknowledgment, one use, expiration, revocation and fresh-instance scope
+ok 25 - explicit acknowledgment, one use, expiration, revocation and fresh-instance scope
+  ---
+  duration_ms: 0.5795
+  type: 'test'
+  ...
+# Subtest: session grant allows project edits and isolated commands but not data boundaries, other chats or plan mode
+ok 26 - session grant allows project edits and isolated commands but not data boundaries, other chats or plan mode
+  ---
+  duration_ms: 13.377708
+  type: 'test'
+  ...
+# Subtest: a stopped or replaced pending request cannot activate a reviewed conversation
+ok 27 - a stopped or replaced pending request cannot activate a reviewed conversation
+  ---
+  duration_ms: 2.075375
+  type: 'test'
+  ...
+# Subtest: external command dispatcher is shipped outside asar for the pinned Node process
+ok 28 - external command dispatcher is shipped outside asar for the pinned Node process
+  ---
+  duration_ms: 24.918917
+  type: 'test'
+  ...
+# Subtest: YOLO before a task requires acknowledgment, preserves plans/context and invalidates an unisolated prepared send
+ok 29 - YOLO before a task requires acknowledgment, preserves plans/context and invalidates an unisolated prepared send
+  ---
+  duration_ms: 2.294125
+  type: 'test'
+  ...
+# Subtest: YOLO cannot activate without isolation, in read-only modes, during startup or with a stale review
+ok 30 - YOLO cannot activate without isolation, in read-only modes, during startup or with a stale review
+  ---
+  duration_ms: 1.32175
+  type: 'test'
+  ...
+# Subtest: YOLO allows ordinary web/external access, but no secrets, broad directories, ambiguous paths, read-only modes or unknown tools
+ok 31 - YOLO allows ordinary web/external access, but no secrets, broad directories, ambiguous paths, read-only modes or unknown tools
+  ---
+  duration_ms: 15.218458
+  type: 'test'
+  ...
+# Subtest: activating YOLO during Build rechecks waiting tools and revocation prevents later automatic replies
+ok 32 - activating YOLO during Build rechecks waiting tools and revocation prevents later automatic replies
+  ---
+  duration_ms: 1.986125
+  type: 'test'
+  ...
+# Subtest: læsebeskyttelsen afviser beskyttede navne, casevarianter, streams og navnealiaser før læsning
+ok 33 - læsebeskyttelsen afviser beskyttede navne, casevarianter, streams og navnealiaser før læsning
+  ---
+  duration_ms: 6.041208
+  type: 'test'
+  ...
+# Subtest: en neutral symlink til en beskyttet fil afvises; et almindeligt link bliver kanoniseret
+ok 34 - en neutral symlink til en beskyttet fil afvises; et almindeligt link bliver kanoniseret
+  ---
+  duration_ms: 3.775042
+  type: 'test'
+  ...
+# Subtest: den genererede plugin kvitterer for indlæsning og bevarer aktive skills referencefiler
+ok 35 - den genererede plugin kvitterer for indlæsning og bevarer aktive skills referencefiler
+  ---
+  duration_ms: 6.921834
+  type: 'test'
+  ...
+1..35
+# tests 35
+# suites 0
+# pass 35
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2408.087291

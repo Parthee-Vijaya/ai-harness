@@ -1,0 +1,23 @@
+{
+  "passed": true,
+  "checks": [
+    "Test settings saved",
+    "YOLO is absent in Conversation",
+    "YOLO is absent in Plan",
+    "Build offers YOLO before the first task",
+    "Explicit acknowledgment is required",
+    "Warning explains external files and preserved limits",
+    "Cancel keeps YOLO off",
+    "Build shows active YOLO",
+    "Persistent status offers revocation",
+    "No task was launched by opting in",
+    "New conversation has no grant",
+    "Original conversation retains its grant",
+    "Revoke clears active status",
+    "App restart forgets the grant",
+    "Restart shows YOLO off",
+    "No renderer errors"
+  ],
+  "errors": [],
+  "externalModelCalls": 0
+}

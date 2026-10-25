@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "checks": [
+    "Test settings saved",
+    "No proactive YOLO in previous version"
+  ],
+  "errors": [],
+  "externalModelCalls": 0
+}
