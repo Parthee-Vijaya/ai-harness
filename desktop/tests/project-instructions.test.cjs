@@ -71,6 +71,7 @@ test('projektregler kontrolleres igen efter motoropstart, før modellen modtager
   const bench = new Workbench({ directory: await temp(t), profiles, emit: () => {}, safeStorage: {}, engineFactory: () => ({ active: false, start: async () => fs.writeFile(path.join(root, 'AGENTS.md'), 'Ændret under opstart'), send: async () => sends++, abort: async () => {}, close: async () => {} }) });
   await bench.activate({ root, name: 'Prøve' });
   bench.chat.prepared = { mode: 'free', root, disclosure: { fingerprint: 'prøve' }, connection: { kind: 'compatible', name: 'Lokal prøve', baseURL: 'http://127.0.0.1:1/v1' }, model: { id: 'model' }, references: [], context: { rules: '', skills: requiredBuildSkills(), titles: [], features: {}, projectInstructions: null } };
+  bench.skills.context = async () => bench.chat.prepared.context;
   await assert.rejects(bench.send({ text: 'Undersøg projektet', fingerprint: 'prøve' }), /ændret sig under opstart/);
   assert.equal(sends, 0); await bench.close();
 });

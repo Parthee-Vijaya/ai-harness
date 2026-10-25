@@ -1,0 +1,8 @@
+{
+  "passed": true,
+  "checks": [
+    "Before: design is an optional function"
+  ],
+  "errors": [],
+  "externalModelCalls": 0
+}

@@ -22,6 +22,7 @@ function prepare(chat, connection, modelID) {
   const fingerprint = `${connection.id}:${connection.revision || 'first'}:${modelID}`;
   chat.prepared = { mode: 'free', root: chat.root, connection, model: { id: modelID }, references: [], autoCheckpoint: false,
     disclosure: { fingerprint, consentKey: 'test', modelName: modelID }, context: { rules: '', skills: requiredBuildSkills(), features: { versioner: false } } };
+  chat.bench.skills.context = async () => chat.prepared.context;
   chat.preparedInvalidated = false; return fingerprint;
 }
 test('tre projekter beholder hver sin motor, model, besked, hændelser og opgave ved projektskift', async t => {

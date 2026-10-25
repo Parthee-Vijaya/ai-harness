@@ -63,6 +63,7 @@ test('stop under motoropstart sender aldrig prompten', async t => {
  const bench = new Workbench({ directory:await temp(t), profiles, emit:()=>{}, safeStorage:{}, engineFactory:()=>({ active:false, start:async()=>{entered();await blocked;}, send:async()=>calls++, abort:async()=>{}, close:async()=>{} }) });
  await bench.activate({root:await temp(t),name:'Prøve'}); const chat = bench.chat;
  chat.prepared = { root:chat.root, disclosure:{fingerprint:'test'}, connection:{kind:'compatible',name:'Prøve',baseURL:'http://127.0.0.1:1/v1'}, model:{id:'test'}, references:[], context:{ rules:'', skills: requiredBuildSkills(), titles:[], features:{ versioner:true } } };
+ bench.skills.context = async () => chat.prepared.context;
  const pending = bench.send({text:'Må ikke sendes',fingerprint:'test'});
  const rejection = assert.rejects(pending, /stoppet/);
  await reached; await bench.stop(); release(); await rejection;
@@ -75,6 +76,7 @@ test('Stop under lagring efter afsendelse afslutter opgaven og genopliver ikke a
  const bench = new Workbench({ directory: await temp(t), profiles, emit: event => events.push(event), safeStorage: {}, engineFactory: () => ({ active: true, start: async () => {}, send: async () => {}, abort: async () => {}, close: async () => {} }) });
  await bench.activate({ root: await temp(t), name: 'Prøve' }); const chat = bench.chat;
  chat.prepared = { mode: 'free', root: chat.root, disclosure: { fingerprint: 'test', consentKey: 'test' }, connection: { kind: 'compatible', name: 'Prøve', baseURL: 'http://127.0.0.1:1/v1' }, model: { id: 'test' }, references: [], context: { rules: '', skills: requiredBuildSkills(), titles: [], features: {} } };
+ bench.skills.context = async () => chat.prepared.context;
  const consent = require('../core/model-consent.cjs'), remember = consent.remember;
  t.mock.method(consent, 'remember', async (...args) => { entered(); await blocked; return remember(...args); });
  const pending = bench.send({ text: 'Stop under lagring', fingerprint: 'test' }), rejected = assert.rejects(pending, /stoppet/);
@@ -265,6 +267,7 @@ function fakeSend(bench, engines) {
  return async (chat, text, fingerprint = 'regler-1', extra = {}) => {
   chat.prepared = { mode: 'free', root: chat.root, connection: { id: 'c', kind: 'compatible', name: 'Prøve', baseURL: 'http://127.0.0.1:1/v1' }, model: { id: 'test' }, route: null, references: [], fileRefs: [], view: null, autoCheckpoint: false, startup: null,
    disclosure: { fingerprint, consentKey: 'samtykke', modelName: 'test', provider: 'Prøve' }, context: { rules: '', skills: requiredBuildSkills(), titles: [], features: { versioner: false }, integrations: [] } };
+  bench.skills.context = async () => chat.prepared.context;
   return bench.send({ chat: chat.id, text, fingerprint, ...extra });
  };
 }

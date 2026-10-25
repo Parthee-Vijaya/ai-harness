@@ -1,45 +1,45 @@
-# Aktivér den valgte hovedskill før planlægning og bygning
+# Gør designgrundpakken obligatorisk og indlæs den før første byggeopgave
 
-At installere en designskill sikrer ikke, at modellen læser den. Den aktive og validerede harness-aura-design-kerne indgår nu før første modelkald ved Planlæg, Byg og Arbejd direkte. Samme metode kan bruges i idéhjælpen og i eksport til andre værktøjer.
+En model kunne tidligere springe designskillen over, og et gemt fravalg kunne fjerne den fra nye byggeopgaver. Denne ændring holder design og tilgængelighed i grundpakken og indlæser den validerede hovedmetode før første modelkald i Planlæg, Byg og Arbejd direkte. Med #23 medfølger den fulde Aura-design-metode og webapp-byggevejledning.
 
-## Før og efter
+## Adfærd
 
-| Før | Efter |
+- `alwaysOn` i kataloget håndhæves i fælles kode for desktop og CLI. Gamle globale fravalg og projektundtagelser kan ikke slå design fra; øvrige tilvalg ændres ikke.
+- Projekttilpasninger supplerer den originale designkerne. De sletter den ikke. Manglende eller ugyldig obligatorisk skill stopper afsendelsen.
+- Den nøjagtige gennemgåede kerne kontrolleres igen omkring motorstart. En ændring kræver ny gennemgang.
+- Almindelig Samtale får ikke byggeinstruktionerne. Idéhjælp kan bruge samme metode uden værktøjer eller filændringer; #44 anvender dette interface.
+- Indstillinger viser design under “Altid slået til”; første opsætning viser fem valgfrie funktioner. Originalens øvrige UI og onboarding bevares.
+- Ingen ekstra data-, fil- eller værktøjstilladelser. Plan- og værktøjsgodkendelser, Stop og historik bevares.
+
+## Før og efter — den faktiske Electron-app
+
+| Før denne opdatering | Efter denne opdatering |
 |---|---|
-| Designskillen kan være tilgængelig som værktøj, men modellen skal selv vælge at åbne den. | Den aktive kerne er allerede indlæst i byggeforløbet. Fravalg, brugerens egen projektskill og de eksisterende godkendelser respekteres. |
+| ![Tidligere grundpakke](https://raw.githubusercontent.com/Parthee-Vijaya/ai-harness/feat/activate-primary-build-skill/docs/images/design-baseline/before-detail.png) | ![Design er altid med](https://raw.githubusercontent.com/Parthee-Vijaya/ai-harness/feat/activate-primary-build-skill/docs/images/design-baseline/always-on-design-detail.png) |
 
-## Adfærd og bevaring
+Billederne er taget i separate testprofiler. `verify-design-baseline.cjs` gengiver forløbet og kontrollerer indstillingerne gennem rigtig IPC.
 
-- Aktiveringen afhænger af designfunktionen og den effektive projektskill. Almindelig chat får ikke automatisk byggeinstruktionerne.
-- Skillindhold valideres og kontrolleres igen omkring motorstart. Ændret eller fravalgt indhold kræver ny gennemgang frem for tavst at skifte instruktioner.
-- Eksporterede projektinstruktioner fortæller andre værktøjer, hvilken skill de skal starte med. Pakkerne indeholder fortsat de valgte skills og referencer.
-- Dette PR indeholder aktiveringsmekanismen. Selve metoden og webapp-referencen ligger i #23. Uden den skill fungerer appen fortsat uden automatisk indlæsning.
+## Validering 25. oktober 2026
 
-## Test
+- **22/22** fokuserede tests: obligatorisk kerne, gamle fravalg, projekttilpasning, ugyldig metode og katalogregler.
+- **10 native kontroller**: opsætning, ingen designkontakt, IPC-fravalg, bevarede øvrige valg, genstart og ingen rendererfejl.
+- **7 transportforløb** gennem rigtig Workbench → OpenCode 1.18.33 → Mistral-/Corti-adapter → kontrolleret lokal HTTP-server. Første udgående kald indeholder den nøjagtige gennemgåede kerne. Plan/Byg/CLI, gammelt fravalg og almindelig chat er dækket.
+- Samme **7 transportforløb med hele skillen fra #23** består; det er den komplette metode, ikke den lille fixture.
+- Fuld desktop-suite: **520/522**. Samlet #23 + #43: **527/529** og **27/27 CLI-tests**. Begge har kun de samme to fejl i `approvals.test.cjs` (47 og 74), som er reproduceret på originalens uændrede `main` (**514/516**). Ingen tests er sprunget over.
 
-11/11 fokuserede prøver består. Seks yderligere forløb kører rigtig Workbench → OpenCode 1.18.33 → adapter → lokal HTTP-modtager med Mistral-/Corti-protokoller, til-/fravalg og CLI. Den første forespørgsel kontrolleres for den nøjagtige skilltekst.
+Dette er lokale tests på macOS Apple Silicon / Node 22.23.3. Transportprøverne bruger kontrollerede svar og dokumenterer indholdet af forespørgslen; de dokumenterer ikke en ekstern models visuelle kvalitet eller grøn GitHub CI.
 
-Prøverne er kørt lokalt på macOS Apple Silicon med Node 22.23.3 og appens låste afhængigheder. De er ikke en påstand om grøn GitHub CI.
-
-Originalens uændrede main har 514/516 beståede desktoptests. To eksisterende fixtures i `approvals.test.cjs` (linje 47 og 74) fejler også uden dette PR. Den isolerede branches fulde testlog er vedlagt; disse to fejl er ikke skjult eller sprunget over.
-
-```sh
-node --test desktop/tests/build-design.test.cjs desktop/tests/features.test.cjs
-node desktop/scripts/verify-primary-build-skill.cjs
-# Hele desktop-pakken:
-cd desktop && node --test --test-concurrency=1 tests/*.test.cjs
-```
-
-Evidens: [focused.tap](focused.tap), [full.tap](full.tap), [native.json](native.json). Den samme transportprøve er også kørt med den fulde skill fra #23 i samlingsversionen: [native-integrated.json](native-integrated.json).
+[Evidens, testlog og transportresultater](https://github.com/Parthee-Vijaya/ai-harness/tree/feat/activate-primary-build-skill/docs/contributions/primary-design) · [Native resultater](https://github.com/Parthee-Vijaya/ai-harness/blob/feat/activate-primary-build-skill/docs/images/design-baseline/native.json)
 
 ## Integration
 
-Den lokale samlingsprøve med de tidligere 24 bidrag, de ti opdateringer og disse syv nye bidrag består **746/746 desktoptests og 27/27 CLI-tests**. Den bruger forkens integrerede grundlag; fælles filer er flettet med bevarede bindinger, og alle 23 skill-eksporter er genbygget. Det er ikke en påstand om konfliktfri automatisk merge eller grøn hosted CI. [Manifest](integration.json), [desktoplog](integration-desktop.tap) og [CLI-log](integration-cli.tap).
+Integrér #23 først. Uden den installerede metode deklarerer biblioteket dens fravær, så originalens selvstændige app fortsat virker; med metoden installeret er den obligatorisk. Den lokale samlingsprøve genbygger alle 23 eksportpakker og tilpasser de to skill-antal i den eksisterende fixture. Ingen udgivelsesidentitet eller modelversion ændres.
 
-Integrér indholds-PR #23 først. Efter kombinationen skal `node scripts/build-packages.cjs` køres og de 23 opdaterede arkiver samt katalog/site kontrolleres ind i integrationscommitten. F08 (#36) skal også registrere hovedskillen i den gennemgåede appkontekst. Samlingsprøven omfatter begge dele.
+Ved integration med F08/#36 skal hovedskillen fortsat indgå i den gennemgåede appkontekst. Denne PR erstatter ikke F08’s bindinger. Ældre testfiler i mappen beskriver tidligere revisioner; filerne med `always-on-` er denne opdaterings resultater.
 
-Originalt sammenligningspunkt: `dce68ea74a199ca214ab535a16ff22765d8ee8de`. Funktionerne er udskilt fra den godkendte fork-implementering `fa223d3b2ceb6f27e5fecf4c13f590913801036c`; originalens navn, runtimeversion og øvrige produktfunktioner bevares.
-
-## Afgrænsning
-
-Transportprøven bruger kontrollerede lokale svar. Den beviser instruktionernes tilstedeværelse og fravalg, ikke at alle Mistral- eller Corti-modeller leverer samme visuelle kvalitet. Modellen får ingen ekstra fil-, værktøjs- eller datatilladelse.
+```sh
+node --test desktop/tests/build-design.test.cjs desktop/tests/features.test.cjs desktop/tests/library.test.cjs
+node desktop/scripts/verify-primary-build-skill.cjs
+AURA_PR_EVIDENCE=/tmp/design-proof node desktop/scripts/verify-design-baseline.cjs
+node --test --test-concurrency=1 desktop/tests/*.test.cjs
+```

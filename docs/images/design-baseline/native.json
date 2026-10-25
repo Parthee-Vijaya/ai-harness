@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "checks": [
+    "Setup offers five optional functions and no design opt-out",
+    "Setup explains the mandatory design baseline",
+    "Zero optional choices continue with the baseline",
+    "Choosing no optional features retains design only",
+    "The real IPC cannot switch design off",
+    "The always-on list includes the design method and all five existing rules",
+    "Settings has no contradictory design switch",
+    "Settings fits horizontally",
+    "Restart retains mandatory design without enabling optional features",
+    "No renderer errors"
+  ],
+  "errors": [],
+  "externalModelCalls": 0
+}

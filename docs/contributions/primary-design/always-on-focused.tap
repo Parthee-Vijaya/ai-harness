@@ -1,0 +1,142 @@
+TAP version 13
+# Subtest: mandatory core is loaded in every building mode; ordinary chat stays scoped
+ok 1 - mandatory core is loaded in every building mode; ordinary chat stays scoped
+  ---
+  duration_ms: 13.18825
+  type: 'test'
+  ...
+# Subtest: project customization reaches the core; pre-project context never borrows another project
+ok 2 - project customization reaches the core; pre-project context never borrows another project
+  ---
+  duration_ms: 12.573417
+  type: 'test'
+  ...
+# Subtest: legacy global and project opt-outs cannot remove baseline skills, including after reload
+ok 3 - legacy global and project opt-outs cannot remove baseline skills, including after reload
+  ---
+  duration_ms: 8.058208
+  type: 'test'
+  ...
+# Subtest: an enabled but malformed main skill fails closed instead of silently substituting instructions
+ok 4 - an enabled but malformed main skill fails closed instead of silently substituting instructions
+  ---
+  duration_ms: 0.119542
+  type: 'test'
+  ...
+# Subtest: exports route builds to the primary skill only when it is selected and retain the full guide
+ok 5 - exports route builds to the primary skill only when it is selected and retain the full guide
+  ---
+  duration_ms: 5.307375
+  type: 'test'
+  ...
+# Subtest: an upstream library without the separate method declares its absence explicitly
+ok 6 - an upstream library without the separate method declares its absence explicitly
+  ---
+  duration_ms: 0.201417
+  type: 'test'
+  ...
+# Subtest: uden valg gælder den anbefalede pakke, og en funktion følger den, den bygger på
+ok 7 - uden valg gælder den anbefalede pakke, og en funktion følger den, den bygger på
+  ---
+  duration_ms: 0.691334
+  type: 'test'
+  ...
+# Subtest: standarden gælder alle projekter; undtagelser gemmes kun, når de afviger
+ok 8 - standarden gælder alle projekter; undtagelser gemmes kun, når de afviger
+  ---
+  duration_ms: 98.15475
+  type: 'test'
+  ...
+# Subtest: Komplai Run når kun motoren efter tilvalg og fjernes igen ved fravalg
+ok 9 - Komplai Run når kun motoren efter tilvalg og fjernes igen ved fravalg
+  ---
+  duration_ms: 18.84075
+  type: 'test'
+  ...
+# Subtest: læseregler virker med stier i forhold til Git-roden og uden Git
+ok 10 - læseregler virker med stier i forhold til Git-roden og uden Git
+  ---
+  duration_ms: 0.995458
+  type: 'test'
+  ...
+# Subtest: motorens skillmappe skrives forfra og tager kun gyldige skills
+ok 11 - motorens skillmappe skrives forfra og tager kun gyldige skills
+  ---
+  duration_ms: 3.494625
+  type: 'test'
+  ...
+# Subtest: appens regler følger funktionerne
+ok 12 - appens regler følger funktionerne
+  ---
+  duration_ms: 0.889292
+  type: 'test'
+  ...
+# Subtest: et Promte-login slår Udgivelse til som standard, men respekterer et eget valg
+ok 13 - et Promte-login slår Udgivelse til som standard, men respekterer et eget valg
+  ---
+  duration_ms: 4.902667
+  type: 'test'
+  ...
+# Subtest: det rigtige bibliotek er gyldigt, og hvert værktøj kan installeres og fjernes igen
+ok 14 - det rigtige bibliotek er gyldigt, og hvert værktøj kan installeres og fjernes igen
+  ---
+  duration_ms: 465.97875
+  type: 'test'
+  ...
+# Subtest: et samlet valg af alle værktøjer giver én installation uden modstridende filer
+ok 15 - et samlet valg af alle værktøjer giver én installation uden modstridende filer
+  ---
+  duration_ms: 29.44325
+  type: 'test'
+  ...
+# Subtest: Komplai Run vælges til særskilt og installeres med hele referencen til hvert kodeværktøj
+ok 16 - Komplai Run vælges til særskilt og installeres med hele referencen til hvert kodeværktøj
+  ---
+  duration_ms: 158.303666
+  type: 'test'
+  ...
+# Subtest: det rigtige bibliotek kan indlæses og installeres med Windows-linjeskift
+ok 17 - det rigtige bibliotek kan indlæses og installeres med Windows-linjeskift
+  ---
+  duration_ms: 35.680958
+  type: 'test'
+  ...
+# Subtest: skillsene overholder Agent Skills-formatet og indeholder ingen scripts
+ok 18 - skillsene overholder Agent Skills-formatet og indeholder ingen scripts
+  ---
+  duration_ms: 4.101333
+  type: 'test'
+  ...
+# Subtest: afviser ugyldige skills, værktøjer og uoverensstemmelser
+ok 19 - afviser ugyldige skills, værktøjer og uoverensstemmelser
+  ---
+  duration_ms: 69.798917
+  type: 'test'
+  ...
+# Subtest: integrationer skal beskrive system, ejer, adgang og dataflow og stå for sig
+ok 20 - integrationer skal beskrive system, ejer, adgang og dataflow og stå for sig
+  ---
+  duration_ms: 18.399417
+  type: 'test'
+  ...
+# Subtest: funktionerne i appen dækker hele biblioteket og bygger kun på kendte funktioner
+ok 21 - funktionerne i appen dækker hele biblioteket og bygger kun på kendte funktioner
+  ---
+  duration_ms: 3.417792
+  type: 'test'
+  ...
+# Subtest: integrationsskills holder nøgler på serveren og nævner systemets regler
+ok 22 - integrationsskills holder nøgler på serveren og nævner systemets regler
+  ---
+  duration_ms: 4.909583
+  type: 'test'
+  ...
+1..22
+# tests 22
+# suites 0
+# pass 22
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 828.4485
