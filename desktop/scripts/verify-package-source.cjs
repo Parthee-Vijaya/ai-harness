@@ -8,6 +8,8 @@ const root = path.resolve(__dirname, '..');
 async function files(directory, prefix = '') {
   const result = [];
   for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
+    // Finders hjælpefiler pakkes ikke af electron-builder og er ignoreret i Git.
+    if (entry.name === '.DS_Store' || entry.name.startsWith('._')) continue;
     const relative = prefix + entry.name;
     if (entry.isDirectory()) result.push(...await files(path.join(directory, entry.name), relative + '/'));
     else if (entry.isFile()) result.push(relative);
@@ -39,14 +41,17 @@ async function verify(resources, target) {
   assert.deepEqual(manifest.versions, { opencode: lock.opencode, git: lock.git, node: lock.node });
   assert.deepEqual(manifest.archives, lock.targets[target]);
   // Runtime-værktøjerne fil for fil mod den forberedte runtime; en signeret Mac-pakke kontrolleres mod sin kvittering.
-  const prepared = JSON.parse(await fs.readFile(path.join(root, '.runtime', target, 'manifest.json'), 'utf8'));
+  let prepared;
+  try { prepared = JSON.parse(await fs.readFile(path.join(root, '.runtime', target, 'manifest.json'), 'utf8')); }
+  catch (error) { if (error.code === 'ENOENT') throw new Error(`Den forberedte runtime til ${target} mangler i denne checkout. Kør kontrollen i den checkout, der byggede pakken, eller kopiér .runtime/${target}/manifest.json og .runtime/receipts/ fra den.`); throw error; }
+  await require('./runtime-integrity.cjs').verifyLicenses(path.join(root, 'packaging', 'licenses'), prepared);
   const finalPayloads = target.startsWith('darwin-') ? await require('./signed-runtime-proof.cjs').expected(resources, target, prepared.payloads) : null;
   let runtimePayload;
   try { runtimePayload = await require('./runtime-integrity.cjs').verifyRuntime(path.join(resources, 'runtime'), manifest, prepared, lock, target, finalPayloads); }
   catch (error) { if (!finalPayloads && target.startsWith('darwin-')) error.message += ' Er pakken signeret, skal kvitteringen fra netop den bygning ligge i .runtime/receipts i denne checkout.'; throw error; }
   // Kildebeviset skal dække alle aktuelle produktfiler, og filerne skal være de committede.
   const proofs = require('./package-source-proof.cjs'), proof = JSON.parse(await fs.readFile(path.join(resources, 'source-proof.json'), 'utf8'));
-  const expectedNames = (await proofs.productFiles(root)).map(name => path.relative(path.dirname(root), path.resolve(root, name)).split(path.sep).join('/')).sort();
+  const expectedNames = (await proofs.productFiles(root, proof.sourceCommit)).map(name => path.relative(path.dirname(root), path.resolve(root, name)).split(path.sep).join('/')).sort();
   const missing = expectedNames.filter(name => !Object.hasOwn(proof.files || {}, name)), extra = Object.keys(proof.files || {}).filter(name => !expectedNames.includes(name));
   if (missing.length || extra.length) throw new Error(`Kildebeviset dækker ikke de aktuelle produktfiler. Mangler: ${missing.slice(0, 5).join(', ') || 'ingen'}. I overskud: ${extra.slice(0, 5).join(', ') || 'ingen'}.`);
   const sourceIdentity = await proofs.verify(root, proof);

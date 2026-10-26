@@ -24,7 +24,10 @@ module.exports = {
     if (manifest.target !== target) throw new Error('Forkert runtime til pakningen.');
     // Runtime-værktøjerne skal være præcis de forberedte, og pakken får et kildebevis. Pakning kræver committede filer.
     if (manifest.payloads?.schemaVersion !== 1) throw new Error('Forbered runtime igen med npm run runtime:prepare før pakning.');
-    await require('./scripts/runtime-integrity.cjs').verifyRuntime(folder, manifest, manifest, require('./runtime-lock.json'), target);
+    const integrity = require('./scripts/runtime-integrity.cjs');
+    await integrity.verifyRuntime(folder, manifest, manifest, require('./runtime-lock.json'), target);
+    await integrity.verifyLicenses(path.join(__dirname, 'packaging', 'licenses'), manifest);
+    await integrity.verifyInstalled(__dirname);
     const proof = path.join(__dirname, '.runtime', `source-proof-${target}.json`);
     await require('./scripts/package-source-proof.cjs').create(__dirname, proof);
     context.packager.config.extraResources = [...profileResources, { from: folder, to: 'runtime' }, { from: proof, to: 'source-proof.json' }];

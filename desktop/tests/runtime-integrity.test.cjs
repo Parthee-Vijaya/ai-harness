@@ -116,3 +116,22 @@ test('signeringen kontrollerer runtime før signering og gemmer kvitteringen eft
   // electron-builder kalder sign med et ekstra argument; det må ikke tages for signeringsfunktionen.
   assert.equal(sign.length, 1);
 });
+
+test('licenser, der er rettet efter runtime:prepare, og node_modules, der afviger fra låsefilen, stopper pakningen', async t => {
+  const { verifyLicenses, verifyInstalled } = require('../scripts/runtime-integrity.cjs');
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'aura-laas-')); t.after(() => fs.rm(root, { recursive: true, force: true }));
+  await fs.mkdir(path.join(root, 'licenses')); await fs.writeFile(path.join(root, 'licenses/A.txt'), 'licens');
+  const runtime = path.join(root, 'runtime'); await fs.mkdir(path.join(runtime, 'licenses'), { recursive: true }); await fs.writeFile(path.join(runtime, 'licenses/A.txt'), 'licens');
+  const manifest = { payloads: await inventory(runtime) };
+  await verifyLicenses(path.join(root, 'licenses'), manifest);
+  await fs.writeFile(path.join(root, 'licenses/A.txt'), 'rettet licens');
+  await assert.rejects(verifyLicenses(path.join(root, 'licenses'), manifest), /runtime:prepare igen/);
+  const lock = { packages: { '': {}, 'node_modules/a': { version: '1.0.0', integrity: 'sha512-a' }, 'node_modules/fsevents': { version: '2.0.0', optional: true, os: ['darwin'] } } };
+  await fs.writeFile(path.join(root, 'package-lock.json'), JSON.stringify(lock)); await fs.mkdir(path.join(root, 'node_modules'));
+  await fs.writeFile(path.join(root, 'node_modules/.package-lock.json'), JSON.stringify({ packages: { 'node_modules/a': { version: '1.0.0', integrity: 'sha512-a' } } }));
+  await verifyInstalled(root);
+  await fs.writeFile(path.join(root, 'node_modules/.package-lock.json'), JSON.stringify({ packages: { 'node_modules/a': { version: '1.0.1', integrity: 'sha512-b' } } }));
+  await assert.rejects(verifyInstalled(root), /node_modules\/a.*npm ci/);
+  await fs.rm(path.join(root, 'node_modules/.package-lock.json'));
+  await assert.rejects(verifyInstalled(root), /npm ci/);
+});

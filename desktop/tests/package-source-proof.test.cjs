@@ -50,3 +50,26 @@ test('produktlisten dækker byggekonfiguration, entitlements og byggescripts', a
   for (const name of ['electron-builder.cjs', 'packaging/entitlements.mac.plist', 'packaging/entitlements.node.mac.plist', 'scripts/sign-mac.cjs', 'scripts/prepare-runtime.cjs', 'main.cjs', 'core/engine.cjs', '../LICENSE']) assert.ok(names.includes(name), name);
   assert.ok(names.some(name => name.startsWith('packaging/licenses/')));
 });
+
+// Et syntetisk repo med alle produktfilernes faste navne, så create() kan køres helt.
+async function product(t) {
+  const f = await fixture(t), { BUILD_SCRIPTS } = require('../scripts/package-source-proof.cjs');
+  const write = async (name, content = 'syntetisk\n') => { await fs.mkdir(path.dirname(path.join(f.root, name)), { recursive: true }); await fs.writeFile(path.join(f.root, name), content); };
+  for (const name of ['package.json', 'package-lock.json', 'runtime-lock.json', 'preload.cjs', 'electron-builder.cjs', 'packaging/entitlements.mac.plist', 'packaging/entitlements.node.mac.plist', 'packaging/icon.png', 'packaging/licenses/A.txt', 'core/a.cjs', 'ui/a.js', ...BUILD_SCRIPTS.map(s => 'scripts/' + s)]) await write('desktop/' + name);
+  for (const name of ['LICENSE', 'profiles/catalog.json', 'profiles/grundregler.md', 'profiles/gitignore.txt', 'profiles/skills/a/SKILL.md']) await write(name);
+  f.git('add', '-A'); f.git('-c', 'commit.gpgsign=false', 'commit', '--quiet', '-m', 'produktfiler');
+  return f;
+}
+
+test('en committet fil, der er slettet på disken, eller en fil, Git ikke følger, stopper pakningen; Finder-filer gør ikke', async t => {
+  const { create } = require('../scripts/package-source-proof.cjs');
+  const f = await product(t), out = path.join(f.root, 'bevis.json');
+  assert.ok((await create(f.desktop, out)).files['desktop/core/a.cjs']);
+  await fs.writeFile(path.join(f.desktop, 'core/.DS_Store'), 'finder'); await create(f.desktop, out);
+  const removed = path.join(f.root, 'profiles/skills/a/SKILL.md'), original = await fs.readFile(removed);
+  await fs.unlink(removed);
+  await assert.rejects(create(f.desktop, out), /Commit sletningerne før pakning: \.\.\/profiles\/skills\/a\/SKILL\.md/);
+  await fs.writeFile(removed, original);
+  await fs.writeFile(path.join(f.desktop, 'ui/ny.js'), '// ikke fulgt\n');
+  await assert.rejects(create(f.desktop, out), /Git ikke følger, før pakning: ui\/ny\.js/);
+});

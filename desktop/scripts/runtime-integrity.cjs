@@ -62,4 +62,23 @@ async function verifyRuntime(root, manifest, expected, lock, target, finalPayloa
   if (actual.sha256 !== wanted.sha256) throw Error(`Runtime-payload er ændret, ufuldstændig eller har ekstra filer: ${difference(wanted, actual)}`);
   return { files: Object.keys(actual.entries).length, sha256: actual.sha256 };
 }
-module.exports = { inventory, verifyRuntime, difference };
+// Licenserne i runtime-mappen er kopier af packaging/licenses. Er de rettet efter runtime:prepare, skal den køres igen.
+async function verifyLicenses(licenses, manifest) {
+  const expected = {};
+  for (const name of (await fs.readdir(licenses)).filter(name => name !== '.DS_Store' && !name.startsWith('._'))) expected['licenses/' + name] = hash(await fs.readFile(path.join(licenses, name)));
+  const actual = Object.fromEntries(Object.entries(manifest.payloads?.entries || {}).filter(([name]) => name.startsWith('licenses/')).map(([name, entry]) => [name, entry.sha256]));
+  if (JSON.stringify(Object.entries(expected).sort()) !== JSON.stringify(Object.entries(actual).sort())) throw Error('Licenserne i den forberedte runtime afviger fra packaging/licenses. Kør npm run runtime:prepare igen.');
+}
+// De installerede pakker i node_modules skal være dem, package-lock.json låser; ellers kan pakken indeholde andre
+// versioner end beviset viser. Valgfrie pakker til andre platforme mangler med rette.
+async function verifyInstalled(root) {
+  const lock = JSON.parse(await fs.readFile(path.join(root, 'package-lock.json'), 'utf8')).packages || {};
+  let hidden;
+  try { hidden = JSON.parse(await fs.readFile(path.join(root, 'node_modules', '.package-lock.json'), 'utf8')).packages || {}; }
+  catch { throw Error('node_modules mangler eller er ikke installeret med npm. Kør npm ci før pakning.'); }
+  const differs = [];
+  for (const [name, entry] of Object.entries(hidden)) if (!lock[name] || lock[name].version !== entry.version || lock[name].integrity !== entry.integrity) differs.push(name);
+  for (const [name, entry] of Object.entries(lock)) if (name && !entry.optional && !entry.devOptional && !entry.os && !entry.cpu && !entry.link && !hidden[name]) differs.push(name);
+  if (differs.length) throw Error(`node_modules svarer ikke til package-lock.json (${differs.slice(0, 3).join(', ')}). Kør npm ci før pakning.`);
+}
+module.exports = { inventory, verifyRuntime, difference, verifyLicenses, verifyInstalled };

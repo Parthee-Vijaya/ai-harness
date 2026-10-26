@@ -5,20 +5,28 @@ const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 const { createHash } = require('node:crypto');
 const hash = value => createHash('sha256').update(value).digest('hex');
-// Byggescripts, som electron-builder kører under pakning og signering.
-const BUILD_SCRIPTS = ['create-icon.cjs', 'package-source-proof.cjs', 'prepare-runtime.cjs', 'runtime-integrity.cjs', 'sign-mac.cjs', 'signed-runtime-proof.cjs'];
+// Scripts, der forbereder, pakker, signerer eller afgør kildebevisets filliste.
+const BUILD_SCRIPTS = ['create-icon.cjs', 'package-source-proof.cjs', 'prepare-runtime.cjs', 'runtime-integrity.cjs', 'sign-mac.cjs', 'signed-runtime-proof.cjs', 'verify-package-source.cjs'];
+// Mapper, hvis indhold er produktfiler.
+const FOLDERS = ['packaging/licenses', 'core', 'ui', '../profiles/skills'];
 
 // Én fælles liste til pakning og kontrol: appkode, profiler, byggekonfiguration, entitlements og byggescripts.
-async function productFiles(root) {
-  const { files } = require('./verify-package-source.cjs');
+// Uden commit læses mapperne fra disken; med et commit læses de fra Git, så en fil, der mangler på disken, også tæller.
+async function folderFiles(root, folder, commit) {
+  if (!commit) return require('./verify-package-source.cjs').files(path.join(root, folder), folder + '/');
+  const gitFolder = path.relative(path.dirname(root), path.resolve(root, folder)).split(path.sep).join('/');
+  // Stien er relativ til repoets rod (desktop-mappens forælder), så ls-tree køres derfra.
+  const listed = execFileSync('git', ['ls-tree', '-r', '--name-only', commit, '--', gitFolder + '/'], { cwd: path.dirname(path.resolve(root)), encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
+  return listed.split('\n').filter(Boolean).map(name => folder + '/' + name.slice(gitFolder.length + 1)).sort();
+}
+async function productFiles(root, commit = null) {
+  const listed = (await Promise.all(FOLDERS.map(folder => folderFiles(root, folder, commit)))).flat();
   return [...new Set([
     'package.json', 'package-lock.json', 'runtime-lock.json', 'main.cjs', 'preload.cjs', 'electron-builder.cjs',
     ...BUILD_SCRIPTS.map(name => 'scripts/' + name),
     'packaging/entitlements.mac.plist', 'packaging/entitlements.node.mac.plist', 'packaging/icon.png',
-    ...await files(path.join(root, 'packaging/licenses'), 'packaging/licenses/'),
-    ...await files(path.join(root, 'core'), 'core/'), ...await files(path.join(root, 'ui'), 'ui/'),
-    '../LICENSE', '../profiles/catalog.json', '../profiles/grundregler.md', '../profiles/gitignore.txt',
-    ...await files(path.join(root, '../profiles/skills'), '../profiles/skills/')
+    ...listed,
+    '../LICENSE', '../profiles/catalog.json', '../profiles/grundregler.md', '../profiles/gitignore.txt'
   ])].sort();
 }
 
@@ -40,7 +48,12 @@ async function sourceProof(root, names) {
 }
 
 async function create(root, output) {
-  const proof = await sourceProof(root, await productFiles(root));
+  // Filer, der er committet, men slettet på disken, og filer på disken, Git ikke følger, stopper også pakningen.
+  const onDisk = await productFiles(root), committed = await productFiles(root, 'HEAD');
+  const deleted = committed.filter(name => !onDisk.includes(name)), untracked = onDisk.filter(name => !committed.includes(name));
+  if (deleted.length) throw Error(`Commit sletningerne før pakning: ${deleted.slice(0, 5).join(', ')}`);
+  if (untracked.length) throw Error(`Fjern eller commit filerne, Git ikke følger, før pakning: ${untracked.slice(0, 5).join(', ')}`);
+  const proof = await sourceProof(root, onDisk);
   await fs.writeFile(output, JSON.stringify(proof, null, 2) + '\n');
   return proof;
 }
