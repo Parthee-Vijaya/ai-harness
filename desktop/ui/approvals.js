@@ -27,17 +27,30 @@
     const [title, effect] = texts[p.permission] || ['Gennemgå denne handling', 'Læs de tekniske detaljer, før du tillader den.'];
     return { title, effect };
   }
-  function diffRows(diff) {
-    const box = node('div', undefined, 'diff approval-diff');
-    for (const row of diff.rows.slice(0, 400)) {
-      if (row.type === 'gap') { box.append(node('div', '⋯', 'diff-gap')); continue; }
-      const kind = row.type === '+' ? 'add' : row.type === '-' ? 'del' : 'same';
-      const line = node('div', undefined, `diff-row ${kind}`), sign = node('span', row.type === ' ' ? '' : row.type === '+' ? '+' : '−', 'sign'); sign.setAttribute('aria-hidden', 'true');
-      const text = node('span', undefined, 'code'); if (kind !== 'same') text.append(node('span', kind === 'add' ? 'Tilføjet: ' : 'Fjernet: ', 'visually-hidden')); text.append(row.text || ' ');
-      line.append(node('span', row.old ?? '', 'ln'), node('span', row.new ?? '', 'ln'), sign, text); box.append(line);
+  // Hele ændringen kan læses, før der svares: 400 rækker ad gangen med Vis N linjer mere. Efter forslag i #35.
+  function diffRows(diff, file = '') {
+    const container = node('div'), box = node('div', undefined, 'diff approval-diff');
+    box.setAttribute('role', 'region'); box.setAttribute('aria-label', file ? `Foreslået ændring i ${file}` : 'Foreslået ændring'); box.tabIndex = 0;
+    const status = node('p', '', 'hint diff-page-status'), more = node('button', '', 'text-button');
+    status.setAttribute('role', 'status'); more.type = 'button';
+    let shown = 0;
+    function appendRows() {
+      const scroll = box.scrollTop, page = view.diffPage(diff.rows, shown);
+      for (const row of diff.rows.slice(shown, page.end)) {
+        if (row.type === 'gap') { box.append(node('div', '⋯', 'diff-gap')); continue; }
+        const kind = row.type === '+' ? 'add' : row.type === '-' ? 'del' : 'same';
+        const line = node('div', undefined, `diff-row ${kind}`), sign = node('span', row.type === ' ' ? '' : row.type === '+' ? '+' : '−', 'sign'); sign.setAttribute('aria-hidden', 'true');
+        const text = node('span', undefined, 'code'); if (kind !== 'same') text.append(node('span', kind === 'add' ? 'Tilføjet: ' : 'Fjernet: ', 'visually-hidden')); text.append(row.text || ' ');
+        line.append(node('span', row.old ?? '', 'ln'), node('span', row.new ?? '', 'ln'), sign, text); box.append(line);
+      }
+      shown = page.end; box.scrollTop = scroll;
+      status.textContent = page.status; more.textContent = page.more; more.hidden = !page.more;
+      // Når alt er vist, flyttes fokus fra den forsvundne knap til ændringen.
+      if (more.hidden && document.activeElement === more) box.focus({ preventScroll: true });
     }
-    if (diff.rows.length > 400) box.append(node('div', 'Ændringen er lang. Resten ses under Ændringer, når den er gemt.', 'diff-gap'));
-    return box;
+    more.onclick = appendRows; appendRows(); container.append(box);
+    if (!more.hidden) container.append(status, more);
+    return container;
   }
   const pending = new WeakMap(), receipts = new WeakMap();
   const groups = v => { if (!pending.has(v)) pending.set(v, new Map()); return pending.get(v); };
@@ -69,7 +82,7 @@
       const fold = node('details', undefined, 'approval-fold');
       const location = target(p).text;
       fold.append(node('summary', location || 'Se den næste handling'));
-      if (p.permission === 'edit' && typeof p.metadata?.diff === 'string') fold.append(diffRows(view.parseUnifiedDiff(p.metadata.diff)));
+      if (p.permission === 'edit' && typeof p.metadata?.diff === 'string') fold.append(diffRows(view.parseUnifiedDiff(p.metadata.diff), target(p).text));
       else fold.append(node('pre', location));
       existing.items.append(fold);
       waitFor(p.id, existing.title, existing.box, v); return;
@@ -104,7 +117,7 @@
       if (guesses.length) { const list = node('ul', undefined, 'approval-hints'); for (const guess of guesses) list.append(node('li', guess)); const note = node('span', 'Et gæt ud fra kommandoens tekst, ikke en kontrol.', 'hint'); note.append(info('gættet', 'Kommandoer kan ændre eller slette filer, installere programmer og kontakte andre tjenester med dine rettigheder. Aura læser kun kommandoens tekst og kan ikke se, hvad den faktisk gør.')); effectDd.append(list, note); }
     }
     box.append(facts, items);
-    if (diff && (diff.added || diff.removed)) { const fold = node('details', undefined, 'approval-fold'); fold.append(node('summary', 'Se ændringen'), diffRows(diff)); box.append(fold); }
+    if (diff && (diff.added || diff.removed)) { const fold = node('details', undefined, 'approval-fold'); fold.append(node('summary', 'Se ændringen'), diffRows(diff, p.permission === 'edit' ? where.text : '')); box.append(fold); }
     const technical = node('details', undefined, 'approval-fold'); technical.append(node('summary', 'Tekniske detaljer'), node('pre', JSON.stringify({ tilladelse: p.permission, mønstre: p.patterns, detaljer: { ...p.metadata, ...(p.metadata?.diff ? { diff: '(se ændringen ovenfor)' } : {}) } }, null, 2))); box.append(technical);
     const projectFile = p.policy?.projectFile === true;
     const choices = [['Tillad én gang', true], ...(p.policy?.persistable ? [['Tillad altid i projektet', true, 'project']] : []), ['Afvis', false]];

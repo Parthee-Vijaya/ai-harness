@@ -58,6 +58,7 @@ Dialogens tilgængelige navn skal bruge den overskrift, der faktisk vises i det 
   - "Se alle oplysninger" er korte rækker, og lange tekster som appens vejledning og planen har hver sin fold.
   - Resuméet vises igen, når modtager, model, pris, vilkår eller valgte private referencer ændrer sig. Almindelig fortsættelse, interne filhenvisninger og skift mellem Samtale, Planlæg og Byg gentager ikke et allerede accepteret resumé.
 - Første filændring i en opgave spørger, om AI'en må ændre filer i projektet, medmindre projektets Auto-godkend er slået til. "Tillad for denne opgave" gælder kun til opgaven slutter. Gemte tilladelser til en konkret kommando eller mappe kan ses og fjernes i projektindstillingerne. Valg af overordnet mappe viser omfanget før godkendelsen.
+  - **Se ændringen** viser hele den foreslåede ændring, 400 linjer ad gangen med **Vis N linjer mere**, så alt kan læses, før der svares.
   - **Byg og kontrollér automatisk** tillader kun agentkommandoer, når Auras tekniske isolation faktisk er startet. Manglende understøttelse vises ved indstillingen; appen falder aldrig tilbage til automatisk kørsel uden isolation. Ændringer gælder næste opgave.
   - Et godkendelseskort siger Hvad, Hvorfor og Hvis du tillader i tre korte rækker. Ændringen og de tekniske detaljer er foldet sammen. AI'ens begrundelse er markeret som AI'ens, og et gæt om en kommando siger, at det er et gæt.
   - Afvis stopper opgaven. Afvis med en besked er et link under knapperne og lader AI'en fortsætte med brugerens besked.

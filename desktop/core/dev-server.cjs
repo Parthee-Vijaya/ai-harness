@@ -145,7 +145,8 @@ async function terminate(child) {
   }
 }
 class DevServer {
-  constructor({ emit = () => {}, runner = path.join(__dirname, 'dev-server-runner.cjs'), komplaiScript = async () => null, runtimeConfig = {}, getRuntimeConfig } = {}) { this.emit = emit; this.runner = runner; this.komplaiScript = komplaiScript; this.root = null; this.state = 'idle'; this.output = ''; this.generation = 0; this.config = normalizeRuntimeConfig(runtimeConfig); this.getRuntimeConfig = getRuntimeConfig; this.children = []; this.services = []; }
+  // previewPort husker projektets sidste port til Vite og Astro, så forhåndsvisningens lokale data bevares.
+  constructor({ emit = () => {}, runner = path.join(__dirname, 'dev-server-runner.cjs'), komplaiScript = async () => null, runtimeConfig = {}, getRuntimeConfig, previewPort = { get: async () => null, set: async () => {} } } = {}) { this.emit = emit; this.runner = runner; this.komplaiScript = komplaiScript; this.previewPort = previewPort; this.root = null; this.state = 'idle'; this.output = ''; this.generation = 0; this.config = normalizeRuntimeConfig(runtimeConfig); this.getRuntimeConfig = getRuntimeConfig; this.children = []; this.services = []; }
   configure(config = {}) { if (active(this.state)) throw Error('Stop forhåndsvisningen, før opstarten ændres.'); this.config = normalizeRuntimeConfig(config); this.review = null; return this.config; }
   async runtimeConfig() { return normalizeRuntimeConfig(this.getRuntimeConfig ? await this.getRuntimeConfig(this.root) : this.config); }
   snapshot() { return { root: this.root, state: this.state, url: this.url || null, output: this.output, message: this.message || '', kind: this.kind, services: this.services || [], runtimeConfig: this.activeConfig || null }; }
@@ -180,12 +181,15 @@ class DevServer {
     if (!project.supported || project.fingerprint !== review.project.fingerprint) throw new Error('Projektets opsætning er ændret. Gennemgå handlingen igen.');
     this.activeConfig = project.runtimeConfig;
     if (project.kind === 'services') return this.executeServices(review, project);
+    // Den huskede port hentes før opstarten, så intet venter mellem generation og start af processen.
+    const remembered = review.action === 'install' ? null : await this.previewPort.get().catch(() => null);
     const generation = ++this.generation;
     this.output = ''; this.url = null; this.kind = project.kind;
     const installing = review.action === 'install';
     const args = installing ? [review.executables.npm, project.install, '--no-audit', '--no-fund', '--include=dev', `--ignore-scripts=${!review.scripts}`, ...project.installPolicy.args] : [this.runner, this.root, project.kind];
     this.update(installing ? 'installing' : 'starting');
     const env = environment(); env.PATH = [path.dirname(review.executables.node), env.PATH || ''].join(path.delimiter);
+    if (!installing && Number.isInteger(remembered)) env.AURA_PREVIEW_PORT = String(remembered);
     const child = spawn(review.executables.node, args, { cwd: this.root, env, shell: false, detached: process.platform !== 'win32', windowsHide: true, stdio: ['ignore', 'pipe', 'pipe', ...(installing ? [] : ['ipc'])] });
     this.child = child;
     let timer;
@@ -236,6 +240,7 @@ class DevServer {
         } catch { return void failure('Serveren startede, men siden kunne ikke vises. Se detaljerne, og kontrollér startsiden.'); }
         if (generation !== this.generation || this.state !== 'starting') return;
         clearTimeout(timer); this.url = url.href; this.update('running', 'Forhåndsvisningen kører.');
+        void this.previewPort.set(Number(url.port)).catch(() => {});
       });
     }
     return this.snapshot();

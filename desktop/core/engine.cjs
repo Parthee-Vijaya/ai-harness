@@ -13,6 +13,17 @@ const VERSION = '1.18.33';
 const VERSION_CHECK_MS = 120000;
 const SUMMARIZE_TIMEOUT_MS = 20 * 60 * 1000;
 let verified = null;
+// Vagtprocessen tager kun en fuld sti eller programnavnet opencode. Et andet programnavn, fx fra HARNESS_OPENCODE_PATH,
+// slås op i PATH, så vagtprocessen får den fulde sti.
+async function guardedProgram(executable) {
+  if (path.isAbsolute(executable) || executable === 'opencode') return executable;
+  if (executable.includes(path.sep)) return path.resolve(executable);
+  for (const directory of (process.env.PATH || '').split(path.delimiter).filter(entry => path.isAbsolute(entry))) {
+    const candidate = path.join(directory, executable);
+    try { await fs.access(candidate, require('node:fs').constants.X_OK); return candidate; } catch { /* Prøv næste mappe. */ }
+  }
+  throw new Error('AI-motoren blev ikke fundet: ' + executable);
+}
 async function findExecutable({ bundled = require('./runtime.cjs').get(), timeout = VERSION_CHECK_MS } = {}) {
   const binary = process.platform === 'win32' ? 'opencode.exe' : 'opencode';
   // Under udvikling bruges den version, `npm run runtime:prepare` har hentet og kontrolleret, før en eventuel egen installation.
@@ -214,10 +225,27 @@ class OpenCodeEngine {
     this.config.plugin = [readGuard.pluginURL, ...(this.sandbox ? [this.sandbox.pluginURL] : [])];
     if (/\{(?:env|file):/.test(JSON.stringify(this.config))) throw new Error('Konfigurationen indeholder en ikke tilladt variabelhenvisning.');
     // Terminalklienten styrer Stop via API'et; dens Ctrl+C må ikke også ramme motorens procesgruppe.
-    this.child = spawn(executable, ['serve', '--hostname', '127.0.0.1', '--port', '0'], { cwd: this.root, env: isolatedEnv(this.directory, this.config, password, { commandIsolation: Boolean(this.sandbox) }), detached: this.detached, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    const args = ['serve', '--hostname', '127.0.0.1', '--port', '0'], env = isolatedEnv(this.directory, this.config, password, { commandIsolation: Boolean(this.sandbox) });
+    this.enginePID = null;
+    if (process.platform === 'win32') this.child = spawn(executable, args, { cwd: this.root, env, detached: this.detached, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    else {
+      // På macOS og Linux startes OpenCode gennem en vagtproces, så motoren også stopper, hvis Aura eller CLI'en
+      // forsvinder brat. Vagtprocessen kører med appens egen Node eller Electron som Node. Efter forslag i #31.
+      const guardian = path.join(__dirname, 'engine-guardian.cjs').replace(/app\.asar([/\\])/, 'app.asar.unpacked$1');
+      const node = require('./runtime.cjs').get()?.node || process.execPath;
+      // Vagtprocessen har sin egen procesgruppe, så et signal til hele Auras gruppe ikke rammer den og ejeren samtidig.
+      // Den opdager ejerens død gennem IPC-forbindelsen.
+      this.child = spawn(node, [guardian, await guardedProgram(executable), ...args], { cwd: this.root, env: { ...env, ELECTRON_RUN_AS_NODE: '1' }, detached: true, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });
+      this.child.on('message', message => { if (message?.type === 'engine' && Number.isInteger(message.pid)) this.enginePID = message.pid; });
+    }
     // Ingen rå proceslogs sendes til UI; de kan indeholde projektindhold.
     this.child.stderr.resume();
-    this.child.on('exit', () => { if (this.active) { this.active = false; this.handleEvent({ type: 'engine.error', message: 'Agentmotoren stoppede. Start opgaven igen for at oprette en ny session.', failure: { kind: 'engine' } }); } });
+    this.child.on('exit', () => {
+      if (!this.active) return;
+      // Forsvinder vagtprocessen uventet, stoppes motorens procesgruppe her, så den ikke lever videre uden ejer.
+      if (this.enginePID) { try { process.kill(-this.enginePID, 'SIGKILL'); } catch { /* Gruppen er allerede væk. */ } }
+      this.active = false; this.handleEvent({ type: 'engine.error', message: 'Agentmotoren stoppede. Start opgaven igen for at oprette en ny session.', failure: { kind: 'engine' } });
+    });
     try {
       this.url = await new Promise((resolve, reject) => {
         const timer = setTimeout(() => reject(new Error('Agentmotoren kunne ikke starte. Kontrollér installationen.')), 30000);
@@ -334,6 +362,9 @@ class OpenCodeEngine {
   }
   cancelCompaction(error = new Error('Sammenfatningen blev stoppet.')) { if (this.compaction) { this.compaction.controller.abort(error); this.compaction.reject(error); } }
   async diff() { return this.request(`/session/${this.session.id}/diff`); }
-  async close() { this.cancelCompletionCheck(); this.cancelCompaction(); this.active = false; this.eventsAbort?.abort(); this.pending.clear(); if (this.child && this.child.exitCode === null) { this.child.kill(); await new Promise(resolve => { const timer = setTimeout(() => { this.child.kill('SIGKILL'); resolve(); }, 3000); this.child.once('exit', () => { clearTimeout(timer); resolve(); }); }); } }
+  async close() {
+    // Er vagtprocessen allerede væk, stoppes motorens gruppe direkte.
+    if (this.child && this.child.exitCode !== null && this.enginePID) { try { process.kill(-this.enginePID, 'SIGKILL'); } catch { /* Gruppen er allerede væk. */ } }
+    this.cancelCompletionCheck(); this.cancelCompaction(); this.active = false; this.eventsAbort?.abort(); this.pending.clear(); if (this.child && this.child.exitCode === null) { this.child.kill(); await new Promise(resolve => { const timer = setTimeout(() => { this.child.kill('SIGKILL'); resolve(); }, 3000); this.child.once('exit', () => { clearTimeout(timer); resolve(); }); }); } }
 }
 module.exports = { OpenCodeEngine, findExecutable, isolatedEnv, permissions, engineConfig, writeSkills, writePluginRuntime, pluginRuntimeFiles, pluginRuntimePatterns, createReadGuard, writeReadGuard, VERSION, SUMMARIZE_TIMEOUT_MS };

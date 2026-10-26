@@ -84,3 +84,20 @@ test('godkendelsen får værktøjets egne oplysninger med, og en fejl fra OpenCo
   assert.deepEqual(chat.runFailure, { kind: 'limit', status: 429, message: 'Rate limit' });
   chat.running = false; await bench.close();
 });
+
+test('en lang ændring vises 400 rækker ad gangen, og kun rigtige linjer tælles', () => {
+  const { diffPage } = require('../ui/approval-view.js');
+  const rows = [...Array.from({ length: 450 }, () => ({ type: '+' })), { type: 'gap' }, ...Array.from({ length: 455 }, () => ({ type: ' ' }))];
+  let page = diffPage(rows, 0);
+  assert.deepEqual(page, { end: 400, status: 'Viser 400 af 905 linjer i ændringen.', more: 'Vis 400 linjer mere' });
+  page = diffPage(rows, page.end);
+  assert.deepEqual(page, { end: 801, status: 'Viser 800 af 905 linjer i ændringen.', more: 'Vis 105 linjer mere' }, 'skilletegnet tæller ikke, og knappen lover præcis det, der kommer');
+  page = diffPage(rows, page.end);
+  assert.deepEqual(page, { end: 906, status: 'Alle 905 linjer vises.', more: '' });
+  assert.equal(diffPage(Array.from({ length: 401 }, () => ({ type: '+' })), 0).more, 'Vis 1 linje mere');
+  assert.deepEqual(diffPage([{ type: '+' }, { type: 'gap' }, { type: '-' }], 0), { end: 3, status: '', more: '' }, 'en kort ændring har hverken tæller eller knap');
+  const gaps = Array.from({ length: 1800 }, (_, i) => ({ type: i % 2 ? 'gap' : '+' }));
+  const first = diffPage(gaps, 0);
+  assert.deepEqual([first.status, first.more], ['Viser 400 af 900 linjer i ændringen.', 'Vis 400 linjer mere'], 'mange skilletegn skjuler ikke resten');
+  assert.deepEqual(diffPage(Array.from({ length: 500 }, (_, i) => ({ type: i % 2 ? 'gap' : '+' })), 0), { end: 500, status: '', more: '' }, '250 linjer med skilletegn står på én side');
+});

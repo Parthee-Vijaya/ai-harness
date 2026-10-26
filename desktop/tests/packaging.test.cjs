@@ -65,3 +65,10 @@ test('pakket runtime afviser forkert platform og manglende værktøjer',async t=
 test('motorens forventede version er den låste OpenCode-version', () => {
   assert.equal(require('../core/engine.cjs').VERSION, require('../runtime-lock.json').opencode);
 });
+
+// Filer, der startes som egne processer, skal ligge uden for app.asar; ellers kan den pakkede app ikke starte dem.
+// verify-package-source læser med asar.extractFile og opdager derfor ikke en manglende post her.
+test('filer, der startes som egne processer, pakkes ud af app.asar',()=>{
+ const unpack=require('../electron-builder.cjs').asarUnpack;
+ for(const file of ['core/engine-guardian.cjs','core/dev-server-runner.cjs','core/command-sandbox-runner.mjs'])assert.ok(unpack.includes(file),file);
+});

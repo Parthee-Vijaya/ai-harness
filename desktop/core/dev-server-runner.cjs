@@ -3,6 +3,7 @@ const path = require('node:path');
 const { createRequire } = require('node:module');
 const { pathToFileURL } = require('node:url');
 const fs = require('node:fs');
+const net = require('node:net');
 const [root, kind] = process.argv.slice(2);
 let server;
 // komplai Run-appens SDK på /_komplai/run/, som Run serverer det på appens egen adresse. Aura leverer filen.
@@ -46,15 +47,26 @@ process.on('SIGINT', close);
   const imported = await import(pathToFileURL(entry).href);
   const framework = typeof imported[kind === 'vite' ? 'createServer' : 'dev'] === 'function' ? imported : imported.default;
   if (typeof framework?.[kind === 'vite' ? 'createServer' : 'dev'] !== 'function') throw Error('Frameworkets lokale startfunktion blev ikke fundet. Kontrollér pakkens version og installation.');
+  // Vite 5 og 6 og Astro 5 læser port 0 som standardporten 5173, så to forhåndsvisninger kolliderede, og en optaget
+  // 5173 stoppede opstarten. Vi finder derfor en konkret ledig loopback-port lige før start, helst projektets sidste,
+  // så sidens lokale data overlever en genstart. Prøven reserverer ikke porten; strictPort giver en fejl ved en kollision
+  // i stedet for at vise en anden servers side. Efter forslag i #25.
+  const free = candidate => new Promise(resolve => {
+    const probe = net.createServer(); probe.once('error', () => resolve(null));
+    probe.listen(candidate, '127.0.0.1', () => { const chosen = probe.address().port; probe.close(() => resolve(chosen)); });
+  });
+  const remembered = Number(process.env.AURA_PREVIEW_PORT);
+  const requestedPort = (Number.isInteger(remembered) && remembered >= 1024 && remembered <= 65535 && await free(remembered)) || await free(0);
+  if (!requestedPort) throw new Error('Der blev ikke fundet en ledig port til forhåndsvisningen.');
   let port, base = '/';
   if (kind === 'vite') {
-    server = await framework.createServer({ root, clearScreen: false, plugins: [komplai], server: { host: '127.0.0.1', port: 0, strictPort: true, open: false } });
+    server = await framework.createServer({ root, clearScreen: false, plugins: [komplai], server: { host: '127.0.0.1', port: requestedPort, strictPort: true, open: false } });
     await server.listen();
     const address = server.httpServer.address();
     if (address.address !== '127.0.0.1') throw new Error('Serveren skal lytte på loopback.');
     port = address.port; base = server.config.base;
   } else if (kind === 'astro') {
-    server = await framework.dev({ root, server: { host: '127.0.0.1', port: 0, open: false }, vite: { clearScreen: false, plugins: [komplai], server: { strictPort: true, open: false } }, integrations: [{ name: 'aura-preview', hooks: { 'astro:config:done': ({ config }) => { base = config.base; } } }] });
+    server = await framework.dev({ root, server: { host: '127.0.0.1', port: requestedPort, open: false }, vite: { clearScreen: false, plugins: [komplai], server: { strictPort: true, open: false } }, integrations: [{ name: 'aura-preview', hooks: { 'astro:config:done': ({ config }) => { base = config.base; } } }] });
     if (server.address.address !== '127.0.0.1') throw new Error('Serveren skal lytte på loopback.');
     port = server.address.port;
   } else throw new Error('Ukendt framework.');

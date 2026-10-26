@@ -52,6 +52,11 @@ function ownerFor(root) { return spaces.get(root)?.owner || [...registry.values(
 function makeServer(ctx) {
   return new DevServer({ runner: app.isPackaged ? path.join(process.resourcesPath, 'app.asar.unpacked/core/dev-server-runner.cjs') : undefined, komplaiScript: komplaiScript(ctx.root),
     getRuntimeConfig: async () => { return normalizeRuntimeConfig((await ctx.owner.store.project(ctx.owner.project.root)).runtime || {}); },
+    // Den sidste port huskes pr. arbejdsmappe, så en kopi og projektet ikke deler forhåndsvisningens lokale data.
+    previewPort: {
+      get: async () => { const port = (await ctx.owner.store.read()).previewPorts?.[ctx.owner.store.projectKey(ctx.root)]; return Number.isInteger(port) ? port : null; },
+      set: port => ctx.owner.store.update(state => { state.previewPorts = { ...state.previewPorts, [ctx.owner.store.projectKey(ctx.root)]: port }; })
+    },
     emit: state => {
       if (state.state === 'error') recordFailure('forhaandsvisning', 'server');
       if (state.state === 'running') { const old = ctx.preview; ctx.preview = null; void old?.close(); ctx.externalPreview = state.url; }

@@ -60,6 +60,15 @@
     if (automatic) return `${number} godkendt automatisk: ${label}.`;
     return `${number} godkendt${scope === 'project' ? ' med tilladelse gemt i projektet' : scope === 'task' ? ' for denne opgave' : ''}: ${label}.`;
   }
-  const api = { parseUnifiedDiff, commandHints, failureText, commandResult, groupKey, receiptText };
+  // Den foreslåede ændring vises 400 rækker ad gangen. Kun rigtige linjer tælles; ⋯-skilletegn er ikke linjer. Efter forslag i #35.
+  function diffPage(rows, shown, step = 400) {
+    // En side slutter efter step rigtige linjer; skilletegn undervejs følger med uden at tælle.
+    let end = shown, added = 0;
+    while (end < rows.length && (added < step || rows[end].type === 'gap')) { if (rows[end].type !== 'gap') added++; end++; }
+    const lines = rows.filter(row => row.type !== 'gap').length, visible = rows.slice(0, end).filter(row => row.type !== 'gap').length, rest = lines - visible;
+    const next = Math.min(step, rest), status = rest ? `Viser ${visible} af ${lines} linjer i ændringen.` : visible > step ? `Alle ${lines} linjer vises.` : '';
+    return { end, status, more: rest ? `Vis ${next} ${next === 1 ? 'linje' : 'linjer'} mere` : '' };
+  }
+  const api = { parseUnifiedDiff, commandHints, failureText, commandResult, groupKey, receiptText, diffPage };
   if (typeof module === 'object' && module.exports) module.exports = api; else root.ApprovalView = api;
 })(typeof window === 'object' ? window : globalThis);

@@ -92,3 +92,24 @@ test('stop under rigtig installation lukker også pakkescriptets underproces', a
   await until(() => { try { process.kill(pid, 0); return false; } catch { return true; } });
   await wait(100); assert.equal(manager.state, 'stopped'); assert.equal(manager.url, null);
 });
+
+test('forhåndsvisningen bruger projektets huskede port og gemmer den, den fik', async t => {
+  // Runneren kræver frameworket i projektets egen node_modules, så stien skal være den rigtige (/var er et link på macOS).
+  const root = await fs.realpath(await fixture(t));
+  const moduleRoot = path.join(root, 'node_modules', 'vite');
+  await fs.mkdir(moduleRoot, { recursive: true });
+  await fs.writeFile(path.join(moduleRoot, 'package.json'), JSON.stringify({ name: 'vite', type: 'module', exports: './index.mjs' }));
+  await fs.writeFile(path.join(moduleRoot, 'index.mjs'), `import http from 'node:http';
+    export async function createServer(options) { const httpServer = http.createServer((req, res) => res.end('ok'));
+      return { httpServer, config: { base: '/' }, listen: () => new Promise((resolve, reject) => { httpServer.once('error', reject); httpServer.listen(options.server.port || 5173, options.server.host, resolve); }), close: () => new Promise(resolve => httpServer.close(resolve)) }; }`);
+  const remembered = await new Promise(resolve => { const s = require('node:net').createServer(); s.listen(0, '127.0.0.1', () => { const port = s.address().port; s.close(() => resolve(port)); }); });
+  const saved = [];
+  const manager = new DevServer({ previewPort: { get: async () => remembered, set: async port => { saved.push(port); } } });
+  t.after(() => manager.stop());
+  await manager.activate(root);
+  await manager.execute((await manager.prepare('start')).token);
+  await until(() => manager.snapshot().state === 'running');
+  assert.equal(Number(new URL(manager.snapshot().url).port), remembered);
+  await until(() => saved.length === 1);
+  assert.deepEqual(saved, [remembered]);
+});
