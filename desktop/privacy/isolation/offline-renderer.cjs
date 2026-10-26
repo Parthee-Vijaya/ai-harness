@@ -26,7 +26,7 @@ async function electronRuntime(executable) {
   if (!/^[A-Za-z0-9.-]+$/.test(bundleId)) throw Error('invalid-electron-bundle');
   const worker = path.join(__dirname, 'offline-renderer-worker.cjs');
   const packaged = __dirname.includes('app.asar/');
-  const trustedReadFiles = packaged ? [] : [worker, path.resolve(__dirname, '../../../package.json'), path.resolve(__dirname, '../../package.json'), ...['app-quality.cjs', 'project-files.cjs', 'git.cjs', 'protected-paths.cjs'].map(file => path.resolve(__dirname, '../../core', file))];
+  const trustedReadFiles = packaged ? [] : [worker, path.resolve(__dirname, '../../../package.json'), path.resolve(__dirname, '../../package.json'), ...['app-quality.cjs', 'rendered-design.cjs', 'project-files.cjs', 'git.cjs', 'protected-paths.cjs'].map(file => path.resolve(__dirname, '../../core', file))];
   return { executable, runtimeRoot, bundleId, trustedReadFiles, args: packaged ? ['--no-sandbox', '--aura-privacy-offline-renderer'] : ['--no-sandbox', worker] };
 }
 

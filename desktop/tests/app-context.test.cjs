@@ -52,3 +52,21 @@ test('Stop during asynchronous context validation prevents a later engine start 
  await reached;await f.bench.stop();release();
  await assert.rejects(sending,/stoppet før afsendelse/);assert.equal(f.starts(),0);assert.equal(f.sends.length,0);assert.equal(f.bench.chat.running,false);
 });
+
+test('first-draft eligibility comes from current files and cannot survive a changed starter', async t => {
+  const f = await setup(t);
+  const { createProject } = require('../core/projects.cjs');
+  const created = await createProject(path.dirname(f.project), { name: 'First draft', purpose: 'En lokal aktivitetsoversigt', links: [], tests: 'manuel' }, [], path.resolve(__dirname, '../../profiles'));
+  await f.bench.activate(created);
+  const text = 'Byg en lokal demo';
+  const d = await f.bench.prepare({ mode: 'free', connectionID: 'fixture', modelID: 'fixture', text });
+  assert.equal(f.bench.chat.prepared.firstDraft, true);
+  const design = d.appContext.components.find(c => c.id === 'Hovedskill til bygning');
+  assert.match(design.text, /SKILLREFERENCE: harness-aura-design\/references\/brand-discovery.md/);
+  await fs.writeFile(path.join(created.root, 'public/index.html'), '<h1>User changed the app before send</h1>');
+  await assert.rejects(f.bench.send({ text, fingerprint: d.fingerprint, contextBinding: d.contextBinding }), /kontekst har ændret sig/);
+  assert.equal(f.sends.length, 0);
+  const next = await f.bench.prepare({ mode: 'free', connectionID: 'fixture', modelID: 'fixture', text });
+  assert.equal(f.bench.chat.prepared.firstDraft, false);
+  assert.match(next.appContext.components.find(c => c.id === 'Hovedskill til bygning').text, /GENERERET UDKAST/);
+});

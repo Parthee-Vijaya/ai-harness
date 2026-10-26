@@ -30,9 +30,9 @@ async function fixture(t, inspect = async ({ root }) => ({ status: 'checked', fi
   const finishCheckpoint = bench.checkpoints.finish.bind(bench.checkpoints);
   bench.checkpoints.finish = async () => { checkpoints++; return finishCheckpoint(); };
   t.after(async () => { await bench.close(); await fs.rm(directory, { recursive: true, force: true }); });
-  async function send(mode = 'free') {
+  async function send(mode = 'free', firstDraft = false) {
     if (mode === 'build') chat.plan = { id: 'chosen-plan', text: 'Build the agreed local app', context: 'Original context', source: 'ai', at: 1 };
-    chat.prepared = { mode, root, disclosure: { fingerprint: 'fixture', consentKey: 'fixture', planID: chat.plan?.id }, connection: { kind: 'compatible', name: 'Local fixture', baseURL: 'http://127.0.0.1:1/v1' }, model: { id: 'fixture' }, references: [], context: { rules: '', skills: requiredBuildSkills(), titles: [], features: {} } };
+    chat.prepared = { firstDraft, mode, root, disclosure: { fingerprint: 'fixture', consentKey: 'fixture', planID: chat.plan?.id }, connection: { kind: 'compatible', name: 'Local fixture', baseURL: 'http://127.0.0.1:1/v1' }, model: { id: 'fixture' }, references: [], context: { rules: '', skills: requiredBuildSkills(), titles: [], features: {} } };
     await bench.send({ text: 'Create a food ordering app', fingerprint: 'fixture' });
   }
   async function change(revision = 'Built') { await fs.writeFile(path.join(root, 'public/index.html'), `<h1>${revision}</h1>`); }
@@ -203,4 +203,49 @@ test('repair dispatch failure neither replays the prompt nor loses the selected 
   await f.change(); await f.idle();
   assert.equal(f.chat.runQuality.outcome, 'repair-error'); assert.equal(f.chat.runQuality.repairs, 1); assert.equal(f.chat.plan, plan); assert.equal(f.chat.runStopped, false); assert.equal(f.chat.running, false);
   assert.equal(f.inspections.length, 1); assert.equal(f.events.filter(e => e.type === 'run.status').at(-1).status, 'error');
+});
+
+const designReport = async ({ root }) => ({ status: 'checked', fingerprint: (await snapshotApp(root)).fingerprint, findings: [],
+  designReview: { status: 'measured', scope: 'local-rendered-signals', observations: [{ id: 'repeated-gradient-panels', count: 6, text: 'UNTRUSTED PAGE CONTENT' }] } });
+
+test('first build reviews measured design once in the same session without approving it', async t => {
+  const f = await fixture(t, designReport); await f.send('build', true);
+  const engine = f.chat.engine, plan = f.chat.plan, task = f.chat.task;
+  await f.change(); await f.idle();
+  assert.equal(engine.sent.length, 2); assert.equal(f.chat.plan, plan); assert.equal(f.chat.task, task);
+  assert.equal(engine.sent[0].system, engine.sent[1].system);
+  assert.match(engine.sent[1].text, /AURAS LOKALE DESIGNMÅLING/);
+  assert.doesNotMatch(engine.sent[1].text, /UNTRUSTED PAGE CONTENT/);
+  assert.equal(f.chat.allowProjectEdits, false); assert.equal(engine.replies.length, 0);
+  await f.change('Same observation still present'); await f.idle();
+  assert.equal(engine.sent.length, 2); assert.equal(f.chat.running, false);
+  assert.equal(f.chat.runQuality.repairs, 1); assert.equal(f.checkpoints(), 1);
+  assert.equal(f.chat.runQuality.report.designReview.observations.length, 1, 'unresolved signals remain in evidence');
+});
+
+test('existing projects never receive an automatic design revision', async t => {
+  const f = await fixture(t, designReport); await f.send('build'); await f.change(); await f.idle();
+  assert.equal(f.engines[0].sent.length, 1); assert.equal(f.chat.running, false);
+});
+
+test('design review shares the two-attempt repair budget instead of creating a second loop', async t => {
+  const f = await fixture(t, async options => ({ ...await designReport(options), findings: errors }));
+  await f.send('build', true);
+  for (let i = 0; i < 3; i++) { await f.change('Revision ' + i); await f.idle(); }
+  assert.equal(f.engines[0].sent.length, 3);
+  assert.equal(f.engines[0].sent.filter(send => send.text.includes('AURAS LOKALE DESIGNMÅLING')).length, 1);
+  assert.equal(f.chat.runQuality.outcome, 'repair-limit'); assert.equal(f.chat.runFailure.kind, 'quality');
+});
+
+for (const reason of ['rejected', 'plan', 'instructions', 'files', 'stop']) test('design review preserves the ' + reason + ' boundary', async t => {
+  const gate = deferred(), entered = deferred(); let mutate = async () => {};
+  const f = await fixture(t, async options => { const report = await designReport(options); entered.resolve(); await gate.promise; await mutate(); return report; });
+  await f.send('build', true); await f.change(); f.response(); f.chat.event({ type: 'session.idle' }); await entered.promise;
+  if (reason === 'rejected') f.chat.runRejected = true;
+  if (reason === 'plan') f.chat.plan = { ...f.chat.plan, text: 'Changed approval' };
+  if (reason === 'instructions') mutate = () => fs.writeFile(path.join(f.root, 'AGENTS.md'), 'Changed rules');
+  if (reason === 'files') mutate = () => f.change('Concurrent edit');
+  if (reason === 'stop') await f.bench.stop();
+  gate.resolve(); await f.settle();
+  assert.equal(f.engines[0].sent.length, 1); assert.equal(f.chat.running, false);
 });

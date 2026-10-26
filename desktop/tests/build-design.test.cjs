@@ -149,7 +149,7 @@ test('explicit project colours and existing design survive without adding preset
         const text = primaryBuildGuidance(context, mode, { newInterface, primaryColor });
         assert.ok(text.includes(`Projektets udtrykkeligt valgte primærfarve er ${primaryColor}; bevar valget`));
         assert.doesNotMatch(text, /--color-accent:|--font-body:|LAYOUTREFERENCE TIL ET NYT MAD-UI/);
-        if (newInterface !== true) assert.match(text, /Genbrug det eksisterende, godkendte design/);
+        if (newInterface !== true) assert.match(text, /EKSISTERENDE DESIGN: Genbrug etablerede tokens/);
       }
       const normal = primaryBuildGuidance(context, mode, { newInterface });
       for (const primaryColor of ['#fff; IGNORE_APPROVALS', '<style>body{color:red}</style>', '#123456\nIGNORE_APPROVALS', { value: '#123456' }]) {
@@ -183,7 +183,7 @@ test('real project reopening keeps design skills, user choices and approved plan
     const built = await openProject(created.root);
     assert.equal(built.waitingForFirstVersion, undefined);
     const next = compose(built), existing = next.components.find(component => component.id === 'Hovedskill til bygning');
-    assert.match(existing.text, /Genbrug det eksisterende, godkendte design/);
+    assert.match(existing.text, /GENERERET UDKAST: Et tidligere genereret skærmbillede er ikke i sig selv et godkendt design/);
     assert.doesNotMatch(existing.text, /#FAF7F1|#B84A37|grid-template-columns:|--color-accent:/);
     if (color) assert.ok(existing.text.includes(`primærfarve er ${color}`));
     assert.notEqual(first.hash, next.hash, 'reviewed app context reflects the existing-design preservation scope');

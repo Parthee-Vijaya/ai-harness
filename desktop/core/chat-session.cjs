@@ -41,6 +41,7 @@ function composeAppContext({ prepared, project, plan, planConversation, dismisse
   const design = primaryBuildGuidance(prepared.context, prepared.mode, {
     purpose: project.purpose,
     newInterface: project.waitingForFirstVersion === true,
+    designStage: project.starter ? 'draft' : 'existing',
     primaryColor: prepared.disclosure.projectDesign?.primaryColor
   });
   if (design) system += add('Hovedskill til bygning', '\n' + design);
@@ -343,7 +344,7 @@ class ChatSession {
     // Forhåndsvisningens størrelse til før/efter-billederne. Kun tal; siden findes i hovedprocessen.
     const view = input.view && Number.isFinite(input.view.width) && Number.isFinite(input.view.height) ? { width: Math.round(input.view.width), height: Math.round(input.view.height) } : null;
     if ((bench.connectionVersions.get(input.connectionID) || 0) !== connectionVersion) throw new Error('Forbindelsen blev ændret. Gennemgå oplysningerne igen.');
-    this.prepared = { mode, engineFingerprint, chatMaterials, ...selection, disclosure, sessionFingerprint, engineVersion, engineMigration, references, fileRefs: checkedRefs, previewTarget: target, view, context, autoCheckpoint, commandIsolation, commandStandby, commandSandboxSupported: commandSupport.available, autoCommandsSnapshot, startup, runtime: settings.runtime, root: this.root };
+    this.prepared = { firstDraft: currentProject.waitingForFirstVersion === true, mode, engineFingerprint, chatMaterials, ...selection, disclosure, sessionFingerprint, engineVersion, engineMigration, references, fileRefs: checkedRefs, previewTarget: target, view, context, autoCheckpoint, commandIsolation, commandStandby, commandSandboxSupported: commandSupport.available, autoCommandsSnapshot, startup, runtime: settings.runtime, root: this.root };
     const prepared = this.prepared;
     prepared.privacy = await bench.privacyRuntimeProvider?.prepareChat(this, prepared);
     prepared.handoff = engineMigration ? disclosure.conversation : this.engineIdentity === engineFingerprint && this.engine?.active ? this.engineConversation || '' : this.data.opencode?.sessionFingerprint === sessionFingerprint ? this.data.opencode.conversation || '' : disclosure.conversation || '';
@@ -404,6 +405,7 @@ class ChatSession {
     const shown = input.text + (prepared.disclosure.fileReferenceText || '') + (prepared.disclosure.previewReference ? `\n\nMål i forhåndsvisningen: ${prepared.disclosure.previewReference}` : '');
     this.supportSelection = { connection: prepared.connection, model: prepared.model, route: prepared.route };
     this.runPrivacy = prepared.privacy || null;
+    this.runDesignReview = { eligible: prepared.firstDraft === true && ['build', 'free'].includes(prepared.mode), sent: false };
     this.runQuality = null; this.qualityFingerprints = new Set(); this.qualityAwaitingReply = null; this.runRejected = false; this.runSystem = null; this.qualityBinding = null;
     this.runMode = prepared.mode; this.runConnectionID = prepared.connection.id; this.runText = new Map(); this.runTools = new Map(); this.runRoles = new Map(); this.allowProjectEdits = false; this.taskRules = new Set(); this.approvals.clear(); this.runFinish = null; this.runFailure = null;
     this.usageBase = this.currentUsage(); this.runSteps = new Map(); this.runPrices = new Map(); this.runPrice = connections.priceFor(prepared.connection, prepared.model, prepared.route);
@@ -886,7 +888,11 @@ class ChatSession {
     }
     const errors = report.findings.filter(finding => finding.severity === 'error').length, warnings = report.findings.filter(finding => finding.severity === 'warning').length;
     this.log({ id: operation.logID, title: errors ? 'Den lokale kontrol fandt fejl' : 'Den lokale kontrol er gennemført', detail: `${errors} fejl · ${warnings} opmærksomhedspunkter. Kontrollen dækker ikke alle funktioner eller designets kvalitet.`, status: errors ? 'error' : 'completed', ended: Date.now() });
-    if (!errors) { finish(); return; }
+    const { qualityRepairInstruction, designReviewInstruction, snapshotApp } = require('./app-quality.cjs');
+    // Only the first build of Aura's unchanged starter can receive one design
+    // review. Existing apps and later tasks retain their current visual scope.
+    const designInstruction = this.runDesignReview?.eligible && !this.runDesignReview.sent ? designReviewInstruction(report) : '';
+    if (!errors && !designInstruction) { finish(); return; }
     if (this.runRejected) {
       this.runQuality.outcome = 'approval-rejected';
       this.log({ kind: 'session', title: 'Ingen automatisk rettelse efter en afvist handling', detail: 'Kontrollens fund er bevaret. Aura genoptager ikke arbejdet uden en ny besked fra dig.', status: 'error', task: operation.task.id });
@@ -900,10 +906,9 @@ class ChatSession {
       this.log({ kind: 'session', title: 'Kontrollen fandt stadig fejl', detail: repeated ? 'Filerne er uændrede siden sidste kontrol. Aura gentager ikke rettelsen.' : 'To automatiske rettelsesforsøg er brugt. Du kan gennemgå resultatet og vælge næste skridt.', status: 'error', task: operation.task.id });
       finish(); return;
     }
-    const { qualityRepairInstruction, snapshotApp } = require('./app-quality.cjs');
     // Only trusted, fixed diagnostic templates are sent. Never page text,
     // arbitrary exception messages, screenshots or instructions from the app.
-    const instruction = qualityRepairInstruction(report);
+    const instruction = [qualityRepairInstruction(report), designInstruction].filter(Boolean).join('\n\n');
     if (!instruction) { this.runQuality.outcome = 'no-safe-repair'; finish(); return; }
     const [instructions, snapshot] = await Promise.all([projectInstructions(this.root), snapshotApp(this.root, { signal: operation.controller.signal }).catch(() => null)]);
     if (!current()) return;
@@ -912,6 +917,7 @@ class ChatSession {
       this.log({ kind: 'session', title: 'Automatisk rettelse blev ikke sendt', detail: 'Projektet, planen eller forudsætningerne er ændret. Gennemgå resultatet før næste opgave.', status: 'error', task: operation.task.id });
       finish(); return;
     }
+    if (designInstruction) this.runDesignReview.sent = true;
     this.runQuality.repairs = repairs + 1; this.runQuality.outcome = 'repairing';
     operation.repairLogID = `quality-repair-${operation.task.id}-${repairs + 1}`;
     this.log({ id: operation.repairLogID, kind: 'session', title: 'Beder AI’en rette fund fra kontrollen', detail: `Forsøg ${repairs + 1} af 2 med samme AI og opgave. Planen, datareglerne og de normale godkendelser gælder fortsat.`, status: 'running', task: operation.task.id, started: Date.now() });

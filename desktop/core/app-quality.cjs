@@ -6,6 +6,7 @@ const crypto = require('node:crypto');
 const { constants } = require('node:fs');
 const { isProtected } = require('./project-files.cjs');
 const { secretContent } = require('./git.cjs');
+const { inspectRenderedDesign, renderedDesignReview, designReviewInstruction } = require('./rendered-design.cjs');
 const MIME = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif', '.ico': 'image/x-icon', '.woff': 'font/woff', '.woff2': 'font/woff2' };
 const CSP = "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; frame-src 'none'; worker-src 'none'; object-src 'none'; form-action 'none'; base-uri 'self'";
 const LIMITS = Object.freeze({ files: 256, bytes: 24 * 1024 * 1024, fileBytes: 8 * 1024 * 1024, clicks: 8, focusSteps: 12, milliseconds: 40000 });
@@ -337,7 +338,12 @@ function createAppQualityInspector({ BrowserWindow, session, directory }) {
       const open = async () => { phase = 'loading'; check(); if (wc.getURL()) await guard(wc.loadURL('about:blank')); await guard(ses.clearStorageData()); await guard(wc.loadURL(origin + '/')); await pause(); check(); };
       for (const [name, width, height] of [['desktop',1440,900], ['mobile',390,844]]) {
         check(); win.setContentSize(width, height); await open();
-        phase = 'metrics'; const measured = await metrics(); check(); views.push({ name, ...measured });
+        phase = 'metrics'; const measured = await metrics(); check();
+        // Optional design measurements must not suppress existing functional
+        // checks if a renderer lacks the measurement capability. Stop still
+        // propagates through the shared controller immediately afterwards.
+        const designMetrics = await evaluate(`(${inspectRenderedDesign.toString()})()`).catch(() => null); check();
+        views.push({ name, ...measured, designMetrics });
         const screenshot = path.join(output, name + '.png');
         phase = 'capture'; await fs.writeFile(screenshot, (await guard(wc.capturePage(undefined, { stayHidden: true, stayAwake: true }))).toPNG(), { mode: 0o600 }); screenshots.push(screenshot);
         phase = 'keyboard-focus';
@@ -373,7 +379,8 @@ function createAppQualityInspector({ BrowserWindow, session, directory }) {
       // images/styles are unavailable in this deliberately isolated environment.
       const incomplete = !settled || views.some(v => v.loading);
       const result = { status: external || incomplete ? 'unsupported' : 'checked', ...(external || incomplete ? { reason: external ? 'external-resources-unavailable' : 'page-not-settled' } : {}), fingerprint: snapshot.fingerprint, findings: findingsFor(views, runtimeErrors.size, external), views, clicks, screenshots,
-        scope: 'static-isolated-smoke', visualDesign: 'not-reviewed', fullUserFlow: 'not-checked' };
+        scope: 'static-isolated-smoke', visualDesign: 'not-reviewed', fullUserFlow: 'not-checked',
+        designReview: renderedDesignReview(views, { complete: !external && !incomplete }) };
       await fs.writeFile(path.join(output, 'report.json'), JSON.stringify(result, null, 2), { mode: 0o600 });
       return result;
     } catch (error) {
@@ -387,4 +394,4 @@ function createAppQualityInspector({ BrowserWindow, session, directory }) {
   inspect.supportsPrivacyIsolation = process.platform === 'darwin';
   return inspect;
 }
-module.exports = { createAppQualityInspector, snapshotApp, findingsFor, qualityRepairInstruction, LIMITS };
+module.exports = { createAppQualityInspector, snapshotApp, findingsFor, qualityRepairInstruction, designReviewInstruction, LIMITS };

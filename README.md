@@ -34,7 +34,7 @@ Design-skills er vejledning, ikke en garanti for et flot eller fejlfrit første 
 
 Pakken stammer fra produktcommit `320a2ae433e1b3e64130d448e43c7a2491b62605`; kildebevis, testtal, pakkeintegritet og afprøvningens grænser er dokumenteret i [release-noterne](docs/releases/aura-1-beta-0.5.0.md). Der påstås ikke Apple-notarisering, grøn GitHub CI, Intel-/Windows-afprøvning, kvalifikation på en ren maskine eller modeluafhængig designkvalitet. Denne fork er særskilt fra det Code-OSS-baserede Aura-1-projekt.
 
-**Nyere kildekode:** Serverdialogens godkendte tekst er rettet, så den beskriver, at previewservere fortsætter ved projektskift. Funktionen er uændret. Denne tekstændring er endnu ikke i den udgivne 0.5.0-DMG.
+**Nyere kildekode:** Serverdialogens godkendte tekst beskriver nu, at previewservere fortsætter ved projektskift. [Idéstatus og netværksrapport](docs/idea-status-network-report.md) giver flere oplysninger om arbejdet og Auras egne kald. [Designforbedringerne](docs/feedback/2026-10-26-first-draft-design.md) leverer konkrete skillreferencer før første modelkald, kræver ærligt brandgrundlag og giver begrænset lokal feedback til første udkast. Modellen styrer fortsat designet. Disse kildeændringer er endnu ikke i den udgivne 0.5.0-DMG.
 
 [Versions- og oprydningsregel](docs/releases/POLICY.md): kun tre seneste færdige lokale DMG-versioner beholdes; lokal kildekode, worktrees, beskrivelser og brugerdata bevares. Brug en separat profil ved afprøvning.
 

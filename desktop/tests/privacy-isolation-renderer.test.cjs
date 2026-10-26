@@ -10,6 +10,12 @@ test('offline renderer profile is readonly input and zero network, with PID-boun
  const offline=makeProfile({workspaceRoot:'/private/input',stateRoot:'/private/state',runtimeRoot:'/runtime',trustedReadRoots:[],trustedReadFiles:[],kind:'offline'});
  assert.doesNotMatch(offline,/allow network-|windowserver|iokit-open|mach-register/);
 });
+test('development renderer grants exact inspector dependency files rather than the core directory', {skip:!native},async()=>{
+ const runtime=await electronRuntime();
+ assert(runtime.trustedReadFiles.includes(path.resolve(__dirname,'../core/rendered-design.cjs')));
+ assert.equal(runtime.trustedReadFiles.includes(path.resolve(__dirname,'../core')),false);
+ for(const file of runtime.trustedReadFiles)assert.equal((await fs.stat(file)).isFile(),true);
+});
 test('native renderer cannot send via Node, subprocess, HTTP, WebSocket or WebRTC, or read host originals', {skip:!native,timeout:25000},async t=>{
  const{base,root,state}=await fixture(t),secret=path.join(base,'host-original.txt');await fs.writeFile(secret,'SYNTHETIC-PROTECTED-ORIGINAL');
  const tcp=net.createServer(s=>{tcpBytes++;s.on('data',b=>tcpBytes+=b.length);s.destroy();}),udp=dgram.createSocket('udp4');let tcpBytes=0,udpBytes=0;udp.on('message',b=>udpBytes+=b.length);
@@ -29,6 +35,7 @@ test('protected quality runs real desktop/mobile and click inspection in private
  const{base,root}=await fixture(t);await fs.mkdir(path.join(root,'public'));const html='<html><style>body{background:white;color:#123;font:20px system-ui;padding:24px}button{font:20px system-ui;padding:10px}</style><main><h1>Private static fixture</h1><button onclick="this.textContent=\'Done\'">Test</button></main></html>';await fs.writeFile(path.join(root,'public/index.html'),html);
  const report=await inspectProtectedApp({root,directory:path.join(base,'reports')});
  assert.equal(report.status,'checked',JSON.stringify(report));assert.equal(report.isolation.network,'none');assert.equal(report.isolation.writersStopped,true);assert.equal(report.isolation.matchingProcesses,0);assert.equal(report.screenshots.length,2);assert.equal(report.clicks,1);
+ assert.equal(report.designReview.status,'measured');assert.deepEqual(report.designReview.observations,[]);assert.equal(report.designReview.aestheticJudgement,'not-reviewed');
  for(const screenshot of report.screenshots){const data=await fs.readFile(screenshot);assert.ok(data.length>500);assert.equal(data.toString('ascii',1,4),'PNG');}
  assert.equal(await fs.readFile(path.join(root,'public/index.html'),'utf8'),html);
  assert.equal(await fs.stat(path.join(path.dirname(report.screenshots[0]),'snapshot')).then(()=>true,()=>false),false);
