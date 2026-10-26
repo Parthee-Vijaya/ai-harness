@@ -530,6 +530,8 @@ npm run runtime:prepare -- darwin-arm64
 npm run package:mac -- --arm64
 ```
 
+Pakningen kræver, at produktfilerne er committet, og lægger et kildebevis (`source-proof.json`) med commit og kontrolsummer i pakken. Runtime-værktøjerne kontrolleres fil for fil mod den forberedte runtime; kør derfor `runtime:prepare` igen, hvis manifestet mangler sit runtimebevis. Se [udgivelsesforløbet](../docs/udgivelse.md).
+
 Intel-Mac bruger `darwin-x64` og `--x64`. Windows bruger mål `win32-x64` og `npm run package:windows -- --x64`; ARM64 bruger `win32-arm64` og `--arm64`. Windows-pakken kan også bygges lokalt fra Mac med de nødvendige byggeværktøjer. En krydsbygget `.exe` er ikke en afprøvning på Windows: installation, første start og opdatering skal stadig prøves der. Pakken er en betaversion.
 
 Signering sker kun, når `HARNESS_SIGN_IDENTITY` eksplicit angives til det godkendte Developer ID-certifikat ved Mac-bygning. Angiv certifikatnavnet uden præfikset `Developer ID Application:`; den lokalt godkendte identitet er `mekbas IVS (2UX98897JW)`. Der er ingen automatisk valg af certifikat. Notarisation er særskilt og kræver en opsat Apple-profil; en signeret pakke er ikke automatisk notariseret. Indtil notarisation er gennemført, må testpakken ikke beskrives som en friktionsfri installation på andre Mac-computere. Omgå ikke kommunens installationspolitik.

@@ -38,11 +38,23 @@ async function verify(resources, target) {
   assert(lock.targets[target], 'Ukendt platform'); assert.equal(manifest.target, target);
   assert.deepEqual(manifest.versions, { opencode: lock.opencode, git: lock.git, node: lock.node });
   assert.deepEqual(manifest.archives, lock.targets[target]);
-  return { version: packed.version, target, sourceFiles: names.length + 1, profileFiles: profiles.length, runtime: manifest.versions, limitation: 'Filkontrol mod arbejdsmappe og låsefil. Ikke installation, signeringskontrol eller afprøvning på en anden computer.' };
+  // Runtime-værktøjerne fil for fil mod den forberedte runtime; en signeret Mac-pakke kontrolleres mod sin kvittering.
+  const prepared = JSON.parse(await fs.readFile(path.join(root, '.runtime', target, 'manifest.json'), 'utf8'));
+  const finalPayloads = target.startsWith('darwin-') ? await require('./signed-runtime-proof.cjs').expected(resources, target, prepared.payloads) : null;
+  let runtimePayload;
+  try { runtimePayload = await require('./runtime-integrity.cjs').verifyRuntime(path.join(resources, 'runtime'), manifest, prepared, lock, target, finalPayloads); }
+  catch (error) { if (!finalPayloads && target.startsWith('darwin-')) error.message += ' Er pakken signeret, skal kvitteringen fra netop den bygning ligge i .runtime/receipts i denne checkout.'; throw error; }
+  // Kildebeviset skal dække alle aktuelle produktfiler, og filerne skal være de committede.
+  const proofs = require('./package-source-proof.cjs'), proof = JSON.parse(await fs.readFile(path.join(resources, 'source-proof.json'), 'utf8'));
+  const expectedNames = (await proofs.productFiles(root)).map(name => path.relative(path.dirname(root), path.resolve(root, name)).split(path.sep).join('/')).sort();
+  const missing = expectedNames.filter(name => !Object.hasOwn(proof.files || {}, name)), extra = Object.keys(proof.files || {}).filter(name => !expectedNames.includes(name));
+  if (missing.length || extra.length) throw new Error(`Kildebeviset dækker ikke de aktuelle produktfiler. Mangler: ${missing.slice(0, 5).join(', ') || 'ingen'}. I overskud: ${extra.slice(0, 5).join(', ') || 'ingen'}.`);
+  const sourceIdentity = await proofs.verify(root, proof);
+  return { version: packed.version, target, sourceIdentity, sourceFiles: names.length + 1, profileFiles: profiles.length, runtime: manifest.versions, runtimePayload, signedReceipt: Boolean(finalPayloads), limitation: 'Filkontrol mod commit, arbejdsmappe og låsefil. Ikke installation, Apples signaturkontrol eller afprøvning på en anden computer.' };
 }
 if (require.main === module) {
   const [resources, target] = process.argv.slice(2);
   if (!resources || !target) { console.error('Angiv pakkens Resources/resources-mappe og runtime-platform.'); process.exitCode = 1; }
   else verify(path.resolve(resources), target).then(result => console.log(JSON.stringify(result))).catch(error => { console.error(error.message); process.exitCode = 1; });
 }
-module.exports = { verify };
+module.exports = { verify, files };
