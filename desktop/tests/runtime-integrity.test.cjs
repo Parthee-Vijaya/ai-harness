@@ -67,21 +67,28 @@ test('macOS-signeringen får en kvittering pr. bygning; senere ændringer og and
   t.after(() => fs.rm(resources, { recursive: true, force: true }));
   await fs.mkdir(path.join(resources, 'runtime')); await fs.copyFile('/usr/bin/true', path.join(resources, 'runtime', 'tool'));
   await fs.writeFile(path.join(resources, 'source-proof.json'), '{"source":"syntetisk"}');
-  const receipt = await receiptPath(resources, target); t.after(() => fs.rm(receipt, { force: true }));
   const input = await inventory(path.join(resources, 'runtime'));
   const manifest = { ...f.manifest, target, payloads: input }, lock = { ...f.lock, targets: { [target]: f.manifest.archives } };
   execFileSync('/usr/bin/codesign', ['--force', '--sign', '-', path.join(resources, 'runtime', 'tool')], { stdio: 'pipe' });
+  const receipt = await receiptPath(resources, target, await inventory(path.join(resources, 'runtime'))); t.after(() => fs.rm(receipt, { force: true }));
   await assert.rejects(verifyRuntime(path.join(resources, 'runtime'), manifest, manifest, lock, target));
   const recorded = await record(resources, target, input);
   assert.notEqual(recorded.payloads.sha256, input.sha256);
   const final = await expected(resources, target, input);
   await verifyRuntime(path.join(resources, 'runtime'), manifest, manifest, lock, target, final);
-  await fs.appendFile(path.join(resources, 'runtime', 'tool'), 'ændret');
-  await assert.rejects(verifyRuntime(path.join(resources, 'runtime'), manifest, manifest, lock, target, final));
-  // En anden bygning har et andet kildebevis og dermed sin egen kvittering; den gamle bevares.
-  await fs.writeFile(path.join(resources, 'source-proof.json'), '{"source":"anden"}');
+  // En ny signering af samme kilde med andre bytes får sin egen kvittering; den første bevares.
+  const copy = path.join(resources, 'runtime', 'tool'), first = await fs.readFile(copy);
+  execFileSync('/usr/bin/codesign', ['--force', '--sign', '-', '--identifier', 'anden.bygning', copy], { stdio: 'pipe' });
+  const second = await record(resources, target, input); t.after(() => fs.rm(path.join(path.dirname(receipt), path.basename(receipt).replace(/-[0-9a-f]{16}\.json$/, `-${second.payloads.sha256.slice(0, 16)}.json`)), { force: true }));
+  assert.notEqual(second.payloads.sha256, recorded.payloads.sha256); await fs.access(receipt);
+  await fs.writeFile(copy, first); assert.ok(await expected(resources, target, input), 'den første bygning kan stadig kontrolleres');
+  // En pakke, der er ændret efter signeringen, har ingen kvittering.
+  await fs.appendFile(copy, 'ændret');
   assert.equal(await expected(resources, target, input), null);
-  await fs.access(receipt);
+  await assert.rejects(verifyRuntime(path.join(resources, 'runtime'), manifest, manifest, lock, target, final));
+  // Et andet kildebevis har heller ingen kvittering.
+  await fs.writeFile(copy, first); await fs.writeFile(path.join(resources, 'source-proof.json'), '{"source":"anden"}');
+  assert.equal(await expected(resources, target, input), null);
 });
 
 test('signeringen kontrollerer runtime før signering og gemmer kvitteringen efter', { skip: process.platform !== 'darwin' }, async t => {
@@ -96,11 +103,11 @@ test('signeringen kontrollerer runtime før signering og gemmer kvitteringen eft
   const manifest = { target, versions: { opencode: lock.opencode, git: lock.git, node: lock.node }, sources: lock.sources || [], archives: lock.targets[target], payloads: await inventory(path.join(resources, 'runtime')) };
   await fs.writeFile(path.join(resources, 'runtime', 'manifest.json'), JSON.stringify(manifest));
   await fs.mkdir(prepared, { recursive: true }); await fs.writeFile(path.join(prepared, 'manifest.json'), JSON.stringify(manifest));
-  const receipt = await receiptPath(resources, target); t.after(() => fs.rm(receipt, { force: true }));
   const calls = [];
   const signer = async () => { calls.push('signér'); execFileSync('/usr/bin/codesign', ['--force', '--sign', '-', path.join(resources, 'runtime', 'tool')], { stdio: 'pipe' }); };
   await signWith({ app }, signer);
   assert.deepEqual(calls, ['signér']);
+  const receipt = await receiptPath(resources, target, await inventory(path.join(resources, 'runtime'))); t.after(() => fs.rm(receipt, { force: true }));
   assert.equal(JSON.parse(await fs.readFile(receipt, 'utf8')).target, target, 'kvitteringen er gemt');
   // En runtime, der er ændret før signeringen, stopper pakningen, før der signeres.
   await fs.appendFile(path.join(resources, 'runtime', 'tool'), 'ændret');

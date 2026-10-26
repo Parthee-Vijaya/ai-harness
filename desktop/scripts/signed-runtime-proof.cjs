@@ -1,6 +1,7 @@
 // Kvittering fra macOS-signeringen: signering ændrer runtime-værktøjernes bytes, så kontrollen bagefter skal vide,
-// hvilke ændringer der er signeringens egne. Én kvittering pr. bygning, navngivet efter pakkens kildebevis, så en ny
-// pakning aldrig sletter en tidligere bygnings kvittering. Det er en lokal kvittering, ikke Apples signaturkontrol.
+// hvilke ændringer der er signeringens egne. Én kvittering pr. bygning, navngivet efter pakkens kildebevis og de
+// signerede bytes. En signatur med tidsstempel giver nye bytes ved hver bygning, så to bygninger af samme commit får
+// hver sin kvittering, og en ny pakning sletter aldrig en tidligere. Det er en lokal kvittering, ikke Apples kontrol.
 // Efter forslag i #39.
 const fs = require('node:fs/promises');
 const path = require('node:path');
@@ -11,9 +12,9 @@ const { createHash } = require('node:crypto');
 const { inventory } = require('./runtime-integrity.cjs');
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const receipts = path.join(__dirname, '..', '.runtime', 'receipts');
-async function receiptPath(resources, target) {
+async function receiptPath(resources, target, signed) {
   const proof = await fs.readFile(path.join(resources, 'source-proof.json'));
-  return path.join(receipts, `signed-runtime-${target}-${hash(proof).slice(0, 16)}.json`);
+  return path.join(receipts, `signed-runtime-${target}-${hash(proof).slice(0, 16)}-${signed.sha256.slice(0, 16)}.json`);
 }
 
 async function record(resources, target, input, verifySignature = file => run('/usr/bin/codesign', ['--verify', '--strict', file])) {
@@ -30,15 +31,15 @@ async function record(resources, target, input, verifySignature = file => run('/
   }
   const proof = await fs.readFile(path.join(resources, 'source-proof.json'));
   const receipt = { schemaVersion: 1, target, inputSha256: input.sha256, sourceProofSha256: hash(proof), payloads: output };
-  const file = await receiptPath(resources, target);
+  const file = await receiptPath(resources, target, output);
   await fs.mkdir(path.dirname(file), { recursive: true });
   await fs.writeFile(file, JSON.stringify(receipt, null, 2) + '\n');
   return receipt;
 }
 
-// Kvitteringen til netop denne pakke, eller null for en usigneret pakke.
+// Kvitteringen til netop denne pakkes bytes, eller null. En pakke, der er ændret efter signeringen, har ingen kvittering.
 async function expected(resources, target, input) {
-  const file = await receiptPath(resources, target);
+  const file = await receiptPath(resources, target, await inventory(path.join(resources, 'runtime')));
   let value; try { value = JSON.parse(await fs.readFile(file, 'utf8')); } catch (error) { if (error.code === 'ENOENT') return null; throw error; }
   assert.equal(value.schemaVersion, 1); assert.equal(value.target, target);
   assert.equal(value.inputSha256, input.sha256, 'Signeringskvitteringen tilhører en anden runtime');
