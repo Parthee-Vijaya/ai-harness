@@ -42,8 +42,9 @@ test('Mistral JSON mode preserves multiline visual proposals and their reviewed 
  assert.doesNotMatch(reviewed.system,/#FAF7F1|#B84A37|--color-background:|grid-template-columns:|LAYOUTREFERENCE TIL ET NYT MAD-UI/);
  assert.match(reviewed.system,/godkendte designforslag har forrang/);
  assert.equal(f.sent.length,0);
- const result=await f.service.send({token:reviewed.token});
+ const {progress,...result}=await f.service.send({token:reviewed.token});
  assert.deepEqual(result,proposal);
+ assert.equal(progress.phase,'completed');assert.equal(progress.token,reviewed.token);
  assert.deepEqual(f.sent[0].body.response_format,{type:'json_object'});
  assert.equal(f.sent[0].body.messages[0].content,reviewed.system);
  const next=await f.service.prepare({...input,idea:'En madbestillingsapp',message:'Kun en demo med fiktive data'});

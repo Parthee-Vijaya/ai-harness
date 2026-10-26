@@ -116,7 +116,8 @@ function azureEndpoint(value) {
   return `${url.origin}/openai/v1`;
 }
 function usesResponses(connection) { return (connection.protocol || definitions[connection.kind]?.protocol) === 'responses'; }
-async function requestJSON(url, { key = '', kind, method = 'GET', body, signal, assertCurrent = () => true } = {}) {
+async function requestJSON(url, { key = '', kind, method = 'GET', body, signal, purpose = 'model-catalog', assertCurrent = () => true } = {}) {
+  const network = require('./network-journal.cjs');
   const headers = { accept: 'application/json' };
   if (key) Object.assign(headers, kind === 'anthropic' ? { 'x-api-key': key, 'anthropic-version': '2023-06-01' } : kind === 'azure' ? { 'api-key': key } : { Authorization: `Bearer ${key}` });
   if (body) headers['content-type'] = 'application/json';
@@ -125,22 +126,26 @@ async function requestJSON(url, { key = '', kind, method = 'GET', body, signal, 
   // A lease is checked after any keychain work, immediately before fetch.
   // No await can admit a changed recipient/policy between this check and I/O.
   current();
-  try { response = await fetch(url, { method, headers, body: body && JSON.stringify(body), signal: signal || AbortSignal.timeout(15000), redirect: 'error' }); }
+  try { response = await network.observedFetch(url, { method, headers, body: body && JSON.stringify(body), signal: signal || AbortSignal.timeout(15000), redirect: 'error' }, { category: 'catalog', purpose, provider: kind }); }
   catch { throw new Error('Serveren svarer ikke. Kontrollér adresse, port, netværk og eventuelt Tailscale.'); }
+  try {
   try { current(); } catch (error) { await response.body?.cancel(); throw error; }
   // En Corti-nøgle virker kun i sit eget miljø. Beskeden siger, hvilken adresse appen prøvede, så testeren ved, hvad der skal tjekkes.
   if (!response.ok && kind === 'corti' && (response.status === 401 || response.status === 403)) throw new Error(`Corti afviste nøglen på ${url.startsWith(CORTI.fr) ? 'adressen i Frankrig' : url.startsWith(CORTI['eu-s']) ? 'adressen i EU-S (Sovereign)' : 'adressen i EU'}. Brug en nøgle fra Corti Models i et projekt i EU, EU-S eller Frankrig; en nøgle virker kun i sit eget miljø.`);
   if (!response.ok) throw new Error(response.status === 401 || response.status === 403 ? 'Serveren afviste adgangen. Kontrollér API-nøglen og tilladelserne.' : `Serveren svarede med HTTP ${response.status}. Ingen anden forbindelse blev valgt.`);
   const chunks = []; let size = 0;
   for await (const chunk of response.body) {
+    network.observeResponseChunk(response, chunk);
     current();
     size += chunk.length;
     if (size > 8_000_000) throw new Error('Serverens svar er for stort.');
     chunks.push(chunk);
   }
   const text = Buffer.concat(chunks).toString('utf8');
+  network.finishResponse(response, { outcome: 'completed' });
   current();
   try { return JSON.parse(text); } catch { throw new Error('Serveren returnerede ikke gyldige modeloplysninger.'); }
+  } catch (error) { network.finishResponse(response, { outcome: signal?.aborted ? 'cancelled' : 'failed', error }); throw error; }
 }
 // Tænkning og indsatsniveauer fra kataloget: Corti oplyser capabilities.reasoning og effort.levels, OpenRouter supported_parameters.
 function catalogReasoning(model) {
@@ -170,7 +175,7 @@ async function listModels(connection, key, { assertCurrent } = {}) {
 async function routes(connection, key, model, { assertCurrent } = {}) {
   assertSupported(connection);
   if (connection.kind !== 'openrouter') return [];
-  const data = await requestJSON(`${connection.baseURL}/models/${model.split('/').map(encodeURIComponent).join('/')}/endpoints`, { key, assertCurrent });
+  const data = await requestJSON(`${connection.baseURL}/models/${model.split('/').map(encodeURIComponent).join('/')}/endpoints`, { key, kind: connection.kind, purpose: 'route-catalog', assertCurrent });
   return (data.data?.endpoints || []).map(item => ({ id: item.tag || item.provider_name, name: item.provider_name, price: item.pricing || null, policy: item.data_policy || null, capabilities: { tools: item.supported_parameters?.includes('tools') ?? null, vision: typeof item.capabilities?.vision === 'boolean' ? item.capabilities.vision : Array.isArray(item.input_modalities) ? item.input_modalities.includes('image') : null } })).filter(route => route.id);
 }
 function disclosure(connection, model, route = null) {

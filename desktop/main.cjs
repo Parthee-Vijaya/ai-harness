@@ -23,6 +23,8 @@ const previewEdit = require('./core/preview-edit.cjs');
 const { History, PreviewImages, kindOf } = require('./core/history.cjs');
 const { fileDetail } = require('./core/change-review.cjs');
 const { OwnTools } = require('./core/own-tools.cjs');
+const networkJournal = require('./core/network-journal.cjs');
+const networkReport = require('./core/network-report.cjs');
 
 // Appen hedder Aura 1. Datamappen og navnet i nøgleringen bevares fra før navneskiftet; se core/app-identity.cjs.
 const { appIdentity, rememberKeychain, projectParent, DISPLAY_NAME } = require('./core/app-identity.cjs');
@@ -370,6 +372,21 @@ function requireIdleProject() {
   return currentProject().root;
 }
 handle('support:report', () => supportReport());
+handle('network:report', () => networkJournal.snapshot());
+handle('network:save', async value => {
+  // Export only a main-owned snapshot. Renderer data cannot become report content
+  // or select an arbitrary output path; the native save dialog owns that choice.
+  const report = networkReport.select(networkJournal.snapshot(), value?.filters);
+  const format = value?.format;
+  if (!['json', 'csv'].includes(format)) throw new Error('Vælg CSV eller JSON.');
+  const chosen = await dialog.showSaveDialog(window, {
+    title:'Gem Auras netværksrapport', defaultPath:`Aura-netvaerksrapport.${format}`,
+    filters:[{name:format.toUpperCase(),extensions:[format]}]
+  });
+  if (chosen.canceled || !chosen.filePath) return false;
+  await fs.writeFile(chosen.filePath, networkReport.serialize(report, format), {mode:0o600});
+  return true;
+});
 handle('support:save', async () => {
   const report = supportReport();
   const chosen = await dialog.showSaveDialog(window, { title: 'Gem fejlrapport', defaultPath: 'Aura-fejlrapport.json', filters: [{ name: 'Fejlrapport', extensions: ['json'] }] });
@@ -884,6 +901,7 @@ handle('preview:execute', token => exclusive(async () => {
 handle('preview:stop', () => currentSpace().devServer.stop().then(() => currentSpace().devServer.snapshot()));
 
 app.whenReady().then(async () => {
+  await networkJournal.configure({directory:path.join(app.getPath('userData'), 'harness', 'network-journal')});
   app.setAboutPanelOptions({ applicationName: DISPLAY_NAME, applicationVersion: app.getVersion() });
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     { label: DISPLAY_NAME, submenu: [
@@ -975,7 +993,7 @@ app.whenReady().then(async () => {
     const name = url.pathname.slice(1);
     const providerAsset = /^provider-(alexandra|anthropic|azure|compatible|corti|komplai|mistral|ollama|openai|openrouter|zen|promte|github-pages|cloudflare|vercel)\.svg$/.test(name);
     const onboardingAsset = ['onboarding-aura-mark.svg', 'onboarding-provider-claude.svg', 'onboarding-provider-mistral.svg'].includes(name);
-    if (url.host !== 'app' || (!providerAsset && !onboardingAsset && name !== 'provider-cloudflare.png' && !['feedback-layout.js', 'feedback-layout.css', 'connection-removal.js', 'privacy-gate.js', 'privacy-gate.css', 'app-version.js', 'preview-working.js', 'preview-working.css', 'idea-refinement.css', 'conversation-permission.css', 'workspace-calm.js', 'workspace-calm.css', 'idea-refinement.js', 'conversation-permission.js', 'onboarding-compact.css', 'history-pages.js', 'chat-materials.js', 'chat-materials.css', 'index.html', 'history-search.js', 'markdown.js', 'project-settings.js', 'aura-icon.png', 'app.js', 'updates.js', 'workspace.js', 'plan-view.js', 'planning.js', 'approval-view.js', 'approvals.js', 'preview-edit.js', 'history.js', 'chats.js', 'palette.js', 'model-advice.js', 'provider-brand.js', 'connection-overview.js', 'chat-display.js', 'context-display.js', 'conversation-mode.js', 'live-work.js', 'server.js', 'viewport.js', 'share-view.js', 'hosting.js', 'deployment-setup.js', 'promte-preview.js', 'komplai-preview.js', 'deployment.js', 'styles.css', 'demo.css', 'onboarding-b.js', 'onboarding-b.css'].includes(name))) return new Response('Ikke fundet', { status: 404 });
+    if (url.host !== 'app' || (!providerAsset && !onboardingAsset && name !== 'provider-cloudflare.png' && !['network-report.js', 'network-report.css', 'feedback-layout.js', 'feedback-layout.css', 'connection-removal.js', 'privacy-gate.js', 'privacy-gate.css', 'app-version.js', 'preview-working.js', 'preview-working.css', 'idea-refinement.css', 'conversation-permission.css', 'workspace-calm.js', 'workspace-calm.css', 'idea-refinement.js', 'conversation-permission.js', 'onboarding-compact.css', 'history-pages.js', 'chat-materials.js', 'chat-materials.css', 'index.html', 'history-search.js', 'markdown.js', 'project-settings.js', 'aura-icon.png', 'app.js', 'updates.js', 'workspace.js', 'plan-view.js', 'planning.js', 'approval-view.js', 'approvals.js', 'preview-edit.js', 'history.js', 'chats.js', 'palette.js', 'model-advice.js', 'provider-brand.js', 'connection-overview.js', 'chat-display.js', 'context-display.js', 'conversation-mode.js', 'live-work.js', 'server.js', 'viewport.js', 'share-view.js', 'hosting.js', 'deployment-setup.js', 'promte-preview.js', 'komplai-preview.js', 'deployment.js', 'styles.css', 'demo.css', 'onboarding-b.js', 'onboarding-b.css'].includes(name))) return new Response('Ikke fundet', { status: 404 });
     return new Response(await fs.readFile(path.join(__dirname, 'ui', name)), { headers: { 'Content-Type': name === 'aura-icon.png' ? 'image/png' : providerAsset || onboardingAsset ? 'image/svg+xml' : name.endsWith('.js') ? 'text/javascript' : name.endsWith('.css') ? 'text/css' : 'text/html; charset=utf-8' } });
   });
   session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));

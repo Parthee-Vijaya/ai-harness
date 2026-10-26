@@ -179,10 +179,14 @@ class ExternalEgress {
     return this.request({ root, action: 'browser-open', destinationId: matches[0][0], url: target.href, dispatch: address => { if (this.binding(scope) !== initial) throw fail('PRIVACY_STALE'); return launch(address); } });
   }
   async request({ root, action = 'integration', destinationId, url, method = 'GET', body, contentType = 'application/json', headers = {}, inspect = inspectText, provenance = [], signal, dispatch = fetch }) {
+    // Browser handoff is not an HTTP request: the browser's later traffic is
+    // explicitly outside this journal's coverage. Observe only final dispatch.
+    const send = (address, options) => action === 'browser-open' ? dispatch(address, options)
+      : require('../network-journal.cjs').observedFetch(address, options, { category: 'integration', purpose: action }, dispatch);
     const scope = this.scope(root), initial = this.binding(scope);
     const current = () => { signal?.throwIfAborted(); if (this.binding(scope) !== initial) throw fail('PRIVACY_STALE'); return true; };
     const layers = await this.policies(scope), policy = composePolicy(layers); current();
-    if (!policy.enabled) { current(); return dispatch(url, { method, ...(body === undefined ? {} : { body }), headers, signal, redirect: 'error' }); }
+    if (!policy.enabled) { current(); return send(url, { method, ...(body === undefined ? {} : { body }), headers, signal, redirect: 'error' }); }
     // Generic host actions have no proof that a summary or artifact is
     // independent of protected project sources. Keep their source floor even
     // if the caller omitted a filename or the content looks innocuous. A
@@ -237,7 +241,7 @@ class ExternalEgress {
         dispatch: (packet, controls) => {
           const decoded = JSON.parse(Buffer.from(packet.body.data, 'base64').toString('utf8'));
           controls.assertCurrent();
-          return dispatch(decoded.address, { method: decoded.method, ...(decoded.payload === null ? {} : { body: Buffer.from(decoded.payload, 'base64') }), headers: { ...decoded.headers, ...brokerHeaders }, signal: controls.signal, redirect: 'error' });
+          return send(decoded.address, { method: decoded.method, ...(decoded.payload === null ? {} : { body: Buffer.from(decoded.payload, 'base64') }), headers: { ...decoded.headers, ...brokerHeaders }, signal: controls.signal, redirect: 'error' });
         },
       } },
     });

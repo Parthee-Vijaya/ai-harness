@@ -612,6 +612,34 @@ function editConnection(connection) {
   $('#connection-use').disabled = projectLoading;
   $('#connection-use').focus();
 }
+// Idea assistance borrows the existing secure connection form without navigating
+// away from the draft or selecting a different model on the user's behalf.
+let ideaConnectionReturn = null;
+window.openIdeaConnection = () => {
+  if (current || setupActive || ideaConnectionReturn || $('#idea-refinement').getAttribute('aria-busy') === 'true') return Promise.resolve(null);
+  const dialog = $('#connections-dialog'), manage = $('.connection-manage'), back = $('#connection-back');
+  if (dialog.open) return Promise.resolve(null);
+  const navigation = navigationRequest, position = { x: window.scrollX, y: window.scrollY }, focus = document.activeElement;
+  const previous = { manageHidden: manage.hidden, backHidden: back.hidden, heading: $('#connections-heading').textContent };
+  moveConnectionForm(false); editingConnection = '';
+  $('#connection-form').reset(); $('#connection-id').value = ''; $('#provider-kind').value = 'mistral'; updateProvider();
+  clearConnectionReceipt(); $('#clear-key').checked = false; $('#connection-feedback').textContent = '';
+  connectionView('edit'); manage.hidden = true; back.hidden = true; $('#connections-heading').textContent = 'Tilføj forbindelse';
+  return new Promise(resolve => {
+    const context = { navigation, finish: null };
+    const closed = () => context.finish(null);
+    context.finish = savedID => {
+      if (ideaConnectionReturn !== context) return;
+      ideaConnectionReturn = null; dialog.removeEventListener('close', closed);
+      if (dialog.open) dialog.close();
+      manage.hidden = previous.manageHidden; back.hidden = previous.backHidden; $('#connections-heading').textContent = previous.heading;
+      if (navigation === navigationRequest && !current) { focus?.focus({ preventScroll: true }); window.scrollTo(position.x, position.y); }
+      resolve(navigation === navigationRequest && !current ? savedID : null);
+    };
+    ideaConnectionReturn = context; dialog.addEventListener('close', closed);
+    try { dialog.showModal(); $('#provider-kind').focus(); } catch (error) { context.finish(null); throw error; }
+  });
+};
 $('#connection-back').onclick = () => { clearConnectionReceipt(); connectionView('list'); renderConnectionList(); $('#connections-search').focus(); };
 $('#connection-add').onclick = () => { $('#connections-dialog').close(); showSetup(); };
 $('#connections-setup').onclick = () => {
@@ -1025,7 +1053,7 @@ $('#provider-kind').onchange = () => { updateProvider(); };
 $('#connection-form').onsubmit = event => {
   event.preventDefault(); action(async () => {
     $('#save-connection').disabled = true;
-    const generation = setupGeneration, guided = setupActive && setupStep === 'provider';
+    const generation = setupGeneration, guided = setupActive && setupStep === 'provider', ideaReturn = ideaConnectionReturn;
     const previousIDs = new Set(state.connections.map(c => c.id));
     const input = connectionInput(); if(connectionReceipt)input.keyReceipt=connectionReceipt; connectionReceipt=null;
     try {
@@ -1036,7 +1064,8 @@ $('#connection-form').onsubmit = event => {
       if (selected) $('#setup-connection').value = selected.id;
       setupControls(); $('#connection-feedback').textContent = 'Forbindelsen er gemt.';
       $('#connection-form').reset(); $('#connection-id').value = ''; updateProvider();
-      if (stillGuided && selected) { setupPage('saved'); await testSetupConnection(); }
+      if (ideaReturn && ideaConnectionReturn === ideaReturn && ideaReturn.navigation === navigationRequest) { ideaReturn.finish(selected?.id || null); }
+      else if (stillGuided && selected) { setupPage('saved'); await testSetupConnection(); }
       else if (!guided) { connectionView('list'); $('#connections-feedback').textContent = 'Forbindelsen er gemt.'; }
     } catch (error) {
       $('#connection-feedback').textContent = error.message;

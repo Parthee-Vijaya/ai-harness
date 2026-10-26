@@ -1,4 +1,6 @@
 const { setTimeout: delay } = require('node:timers/promises');
+const { randomUUID } = require('node:crypto');
+const network = require('./network-journal.cjs');
 
 const IDLE_LIMIT = 120_000, GRACE_LIMIT = 180_000, TOTAL_LIMIT = 20 * 60_000;
 const RETRY_DELAYS = [1000, 3000];
@@ -14,10 +16,11 @@ function retryAfter(value, now = Date.now()) {
 // Retries belong to ONE immutable model request. Never replay an already delivered
 // stream: OpenCode may already have executed a tool from it. Heartbeats carry no
 // model content and can be consumed locally until the first actual SSE event.
-async function forwardModel({ url, headers, payload, res, signal, progress, onRecovery = () => {}, dispatch,
+async function forwardModel({ url, headers, payload, res, signal, progress, onRecovery = () => {}, dispatch, provider,
   idleLimit = IDLE_LIMIT, graceLimit = GRACE_LIMIT, totalLimit = TOTAL_LIMIT, retryDelays = RETRY_DELAYS }) {
   const deadline = AbortSignal.timeout(totalLimit), lifetime = AbortSignal.any([signal, deadline]);
   let committed = false;
+  const groupID = randomUUID();
   const notify = state => { try { onRecovery(state); } catch { /* Observers cannot affect delivery. */ } };
   for (let attempt = 0; ; attempt++) {
     const idle = new AbortController(); let timer, extended = false, response, pause = retryDelays[attempt];
@@ -33,7 +36,7 @@ async function forwardModel({ url, headers, payload, res, signal, progress, onRe
     try {
       lifetime.throwIfAborted();
       const requestSignal = AbortSignal.any([lifetime, idle.signal]);
-      const send = (target, options) => { lifetime.throwIfAborted(); touch(); return fetch(target, options); };
+      const send = (target, options) => { lifetime.throwIfAborted(); touch(); return network.observedFetch(target, options, { category: 'model', purpose: 'model-response', provider, attempt: attempt + 1, groupID }); };
       // Every retry is re-inspected; review time is not provider idle time.
       response = dispatch ? await dispatch({ url, headers, body: payload, signal: requestSignal }, send)
         : await send(url, { method: 'POST', headers, body: payload, redirect: 'error', signal: requestSignal });
@@ -41,6 +44,7 @@ async function forwardModel({ url, headers, payload, res, signal, progress, onRe
         const suggested = retryAfter(response.headers.get('retry-after'));
         pause = Math.max(pause || 0, suggested);
         await response.body?.cancel();
+        network.finishResponse(response, { outcome: 'completed' });
         // Long quota waits are not hidden behind an automatic retry loop.
         const error = transportError(TRANSIENT.has(response.status) ? 'transient' : 'rejected', response.status);
         error.retryable = TRANSIENT.has(response.status) && suggested <= 60_000;
@@ -54,6 +58,7 @@ async function forwardModel({ url, headers, payload, res, signal, progress, onRe
         res.write(chunk);
       };
       for await (const chunk of response.body) {
+        network.observeResponseChunk(response, chunk);
         lifetime.throwIfAborted(); await response.privacyAssertCurrent?.(); touch();
         try { progress.write(chunk, sse); } catch { /* Progress is best effort. */ }
         if (!sse) { write(chunk); continue; }
@@ -79,9 +84,11 @@ async function forwardModel({ url, headers, payload, res, signal, progress, onRe
       if (!committed) throw transportError('network');
       try { progress.end(sse); } catch {}
       res.end();
+      network.finishResponse(response, { outcome: 'completed' });
       if (attempt || extended) notify({ phase: 'recovered', attempt: attempt + 1 });
       return;
     } catch (cause) {
+      network.finishResponse(response, { outcome: signal.aborted ? 'cancelled' : 'failed', error: cause });
       clearTimeout(timer);
       if (signal.aborted) throw signal.reason;
       if (typeof cause.code === 'string' && cause.code.startsWith('PRIVACY_')) throw cause;

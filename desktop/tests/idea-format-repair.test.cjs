@@ -33,8 +33,8 @@ async function fixture(t,{kind='corti',timeout=2000}={}){
 test('a 3056-character completed Corti proposal gets one exact-context format continuation, never truncation',async t=>{
   const f=await fixture(t);f.reply(async n=>({body:envelope(n===1?oversized:JSON.stringify(valid))}));
   const review=await f.service.prepare(input),exact=structuredClone(f.service.review.request.body);
-  const answer=await f.service.send({token:review.token});
-  assert.deepEqual(answer,valid);assert.equal(f.sent.length,2);
+  const {progress,...answer}=await f.service.send({token:review.token});
+  assert.deepEqual(answer,valid);assert.equal(progress.phase,'completed');assert.equal(progress.requestCount,2);assert.equal(f.sent.length,2);
   assert.deepEqual(f.sent[0].body,exact,'first reviewed request is unchanged');
   const first=f.sent[0].body,second=f.sent[1].body;
   assert.equal(second.model,first.model);assert.equal(second.max_tokens,first.max_tokens);
@@ -59,7 +59,7 @@ for(const kind of ['mistral','openrouter','anthropic','openai'])test(`${kind}: f
   const f=await fixture(t,{kind});
   const response=content=>kind==='anthropic'?{stop_reason:'end_turn',content:[{type:'text',text:content}]}:kind==='openai'?{status:'completed',output:[{type:'message',content:[{type:'output_text',text:content}]}]}:envelope(content);
   f.reply(async n=>({body:response(n===1?'{"description":"Unescaped\nline","plan":"Plan","questions":[]}':JSON.stringify(valid))}));
-  const review=await f.service.prepare({...input,routeID:'chosen'});assert.deepEqual(await f.service.send({token:review.token}),valid);
+  const review=await f.service.prepare({...input,routeID:'chosen'}),{progress,...answer}=await f.service.send({token:review.token});assert.deepEqual(answer,valid);assert.equal(progress.phase,'completed');
   assert.equal(f.sent.length,2);assert.equal(f.sent[1].url,f.sent[0].url);
   const first=f.sent[0].body,second=f.sent[1].body;
   assert.equal(second.model,first.model);assert.equal(second.tools,undefined);

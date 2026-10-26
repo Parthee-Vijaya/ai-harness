@@ -1,5 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 const methods = {
+  networkReport:'network:report', networkReportSave:'network:save',
   privacyGet:'privacy:get', privacyConfigure:'privacy:configure', privacyReview:'privacy:review', privacyDecide:'privacy:decide',
   openExternalLink: 'links:open',
   historySearch: 'history:search',

@@ -5,3 +5,27 @@
 #idea-refine-status{font-size:13px;line-height:1.6}.is-thinking:before{content:'';display:inline-block;width:13px;height:13px;margin-right:9px;border:2px solid var(--line);border-top-color:var(--accent,#0056d9);border-radius:50%;vertical-align:-2px;animation:idea-spin 1s linear infinite}@keyframes idea-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.is-thinking:before{animation:none}}
 #idea-review-dialog{width:min(640px,calc(100vw - 32px));max-height:88vh;overflow:auto;border:1px solid var(--line);border-radius:18px;padding:24px}#idea-review-details{display:grid;grid-template-columns:110px minmax(0,1fr);font-size:12px;gap:10px;line-height:1.6}#idea-review-details dd{margin:0;overflow-wrap:anywhere}#idea-review-content{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;max-height:250px;overflow:auto}
+/* Approved measured idea assistance; scoped to the existing light idea screen. */
+#idea-connection-add{display:block;color:var(--accent);font-size:12px;padding:7px 0;margin-top:3px;border-color:transparent;background:transparent}
+#idea-connection-add:hover:not(:disabled){text-decoration:underline;background:transparent}
+#idea-connection-difference{padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--canvas);font-size:12px;line-height:1.6}
+#idea-progress{margin-top:16px;padding:16px 18px;border:1px solid #d7e4f4;border-radius:12px;background:#f8fbff}
+.idea-progress-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+#idea-progress #idea-refine-status{margin:0;font-weight:550;font-size:13px;line-height:1.5}
+#idea-progress-elapsed{font-size:12px;line-height:1.7;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+#idea-progress-description{font-size:12px;line-height:1.65;color:var(--muted);margin:8px 0 10px}
+#idea-progress-destination{font-size:11px;line-height:1.6;color:var(--muted);margin:0;overflow-wrap:anywhere}
+#idea-progress-stages{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;list-style:none;padding:13px 0;margin:15px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+#idea-progress-stages li{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:10px}
+#idea-progress-stages li>span:first-child{display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;border:1px solid #cbd8e7;border-radius:50%;background:var(--surface);font-size:9px}
+#idea-progress-stages li.is-done>span:first-child{background:#edf7f3;border-color:#afd9c6;color:#20805f}
+#idea-progress-stages li.is-current{color:var(--accent);font-weight:600}
+#idea-progress-stages li.is-current>span:first-child{color:#fff;background:var(--accent);border-color:var(--accent)}
+#idea-progress-details summary{font-size:11px}
+#idea-progress-details .hint{font-size:11px;margin-top:12px}
+#idea-progress-measurements{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:9px;font-size:11px;line-height:1.6}
+#idea-progress-measurements dt{color:var(--muted)}#idea-progress-measurements dd{margin:0;text-align:right;overflow-wrap:anywhere}
+#idea-progress-wait{padding:11px 13px;margin:15px 0 0;border:1px solid #f0deba;border-radius:8px;background:#fff8e9;color:#79531b;font-size:12px;line-height:1.7}
+.idea-progress-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:15px}
+.idea-progress-actions .hint{font-size:11px;margin:0}.idea-progress-actions button{font-size:12px}
+@media(max-width:600px){#idea-progress{padding:14px 12px}.idea-progress-heading{flex-direction:column;gap:5px}#idea-progress-stages{display:grid;grid-template-columns:1fr 1fr;justify-content:start}#idea-progress-measurements{font-size:10px}.idea-progress-actions{align-items:flex-start;flex-direction:column}.idea-progress-actions button{width:100%}}
