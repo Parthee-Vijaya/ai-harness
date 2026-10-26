@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, protocol, session, safeStorage, Menu, shell, webFrameMain, clipboard } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, protocol, session, safeStorage, Menu, shell, webFrameMain, clipboard, nativeTheme } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs/promises');
 const crypto = require('node:crypto');
@@ -12,6 +12,7 @@ const { GitHub } = require('./core/github.cjs');
 const { Deployments } = require('./core/deployments.cjs');
 const { Publishing } = require('./core/publishing.cjs');
 const { Preferences } = require('./core/preferences.cjs');
+const { Appearance, windowBackground } = require('./core/appearance.cjs');
 const { Designs } = require('./core/designs.cjs');
 const projectFiles = require('./core/project-files.cjs');
 const previewEdit = require('./core/preview-edit.cjs');
@@ -35,6 +36,7 @@ let assets = [];
 let github, publishing, deployments, deploymentSetup, restoration, promtePreview, komplaiPreview;
 let registry, history, images;
 let ownTools, updates, updating = false;
+let appearance;
 const requests = new AsyncLocalStorage(), operations = new Set(), spaces = new Map();
 let selectedRoot = null;
 function currentWorkbench() { return requests.getStore()?.bench || registry?.selected; }
@@ -312,6 +314,8 @@ handle('preview:revision', async () => {
   return crypto.createHash('sha256').update(entries.sort().join('\n')).digest('hex');
 });
 
+handle('appearance:get', () => appearance.get());
+handle('appearance:save', input => appearance.save(input));
 handle('preferences:get', () => new Preferences(workbench.store).get());
 handle('preferences:save', input => exclusive(() => new Preferences(workbench.store).save(input)));
 handle('designs:clear', () => exclusive(() => { assets = []; return []; }));
@@ -899,6 +903,8 @@ app.whenReady().then(async () => {
   // Gendannelsestokens holdes af den projekt-ejer, som oprettede dem.
   restoration = new Proxy({}, { get(_target, key) { const owner = currentWorkbench().restoration, value = owner[key]; return typeof value === 'function' ? value.bind(owner) : value; } });
   history = new History(registry.store); images = new PreviewImages(registry.store);
+  // Udseendet sættes, før vinduet åbnes, så et mørkt vindue ikke blinker lyst.
+  appearance = new Appearance(registry.store, nativeTheme); await appearance.start();
   await workbench.copies.cleanup();
   github = new GitHub(workbench.store); publishing = new Publishing({ store: workbench.store, git: workbench.git, provider: github });
   deployments = new Deployments(workbench.store, { github });
@@ -933,7 +939,7 @@ app.whenReady().then(async () => {
     if (details.resourceType === 'subFrame' && previewAllowed(details.url)) remember(previewLog.documents, { at: Date.now(), status: details.statusCode, url: details.url });
   });
   function createWindow() {
-    window = new BrowserWindow({ width: 1440, height: 940, minWidth: 980, minHeight: 720, backgroundColor: '#F8FAFC', title: DISPLAY_NAME, icon: appIcon, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, webviewTag: false } });
+    window = new BrowserWindow({ width: 1440, height: 940, minWidth: 980, minHeight: 720, backgroundColor: windowBackground(nativeTheme), title: DISPLAY_NAME, icon: appIcon, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, webviewTag: false } });
     window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     // Fejl, som forhåndsvisningens side selv skriver i konsollen. Kun previewets ramme; appens egne meddelelser tælles ikke.
     window.webContents.on('console-message', event => {
@@ -964,6 +970,7 @@ app.whenReady().then(async () => {
   }
   if (process.platform === 'darwin') app.dock.setIcon(appIcon);
   createWindow();
+  nativeTheme.on('updated', () => window?.setBackgroundColor(windowBackground(nativeTheme)));
   app.on('activate', () => { if (!window) createWindow(); });
 });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });

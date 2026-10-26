@@ -1,6 +1,8 @@
 const { contextBridge, ipcRenderer } = require('electron');
 const methods = {
   activityList: 'activity:list',
+  appearanceGet: 'appearance:get',
+  appearanceSave: 'appearance:save',
   applyDesign: 'designs:apply',
   attachPreview: 'preview:attach',
   briefSave: 'plan:brief',

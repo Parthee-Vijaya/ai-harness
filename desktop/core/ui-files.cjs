@@ -2,6 +2,7 @@
 // Udbyderlogoerne (provider-*.svg og provider-cloudflare.png) styres for sig i main.cjs.
 module.exports = new Set([
   'app.js',
+  'appearance.js',
   'approval-view.js',
   'approvals.js',
   'aura-icon.png',

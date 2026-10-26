@@ -729,3 +729,4 @@ Valg i implementeringen, som kan ændres:
 - Forhåndsvisningen genbruger projektets sidste port, når den er ledig, så sidens lokale data bevares.
 - Den engangsvise nulstilling af AI-sessioner samles i én udgivelse og nævnes i udgivelsesnoterne.
 - Dependabot #11 (OpenCode 1.19.3) venter på motorarbejdet, og roden og `desktop/runtime-lock.json` løftes sammen.
+- Temaet (#46) sættes i Electrons `nativeTheme`. Vinduesramme, felter, menuer og udbyderlogoer følger derfor med, og forhåndsvisningen og skærmbilleder af projektets side bruger samme valg, når siden har et lyst og et mørkt udseende. Valget ligger under Indstillinger › Udseende og i ⌘K. #46's smalle layout ned til 320 px tages ikke med, fordi appvinduet er mindst 980 px bredt.

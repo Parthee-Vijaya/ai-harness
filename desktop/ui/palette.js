@@ -27,6 +27,7 @@
     { label: 'Søg i samtaler', target: '#history-search-open', words: ['søg', 'find', 'beskeder', 'historik'] },
     { label: 'AI-forbindelser', target: '#connections-button', words: ['udbyder', 'nøgle', 'api'] },
     { label: 'Funktioner', target: '#features-button', words: ['indstillinger', 'slå til', 'slå fra'] },
+    { label: 'Udseende', target: '#appearance-button', words: ['tema', 'mørkt', 'lyst', 'farver', 'dark mode', 'system'] },
     { label: 'Projektets indstillinger', target: '#project-settings-button', words: ['tilladelser', 'godkendelser', 'automatisk', 'opstart', 'server', 'netværk'] },
     { label: 'Hjælp og feedback', target: '#support-button', words: ['support', 'fejlrapport'], first: true },
     { label: 'Aura Harness i dit kodeværktøj', target: '#tools-button', words: ['claude code', 'codex', 'cursor', 'skills'] },
