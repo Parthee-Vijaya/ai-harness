@@ -12,7 +12,9 @@ function signingOptions(options) {
 }
 // Runtime-værktøjerne kontrolleres mod den forberedte runtime før signeringen. Bagefter gemmes en kvittering for
 // de bytes, signeringen ændrede, så pakken kan kontrolleres efter signeringen. Efter forslag i #39.
-async function sign(options, signer = require('app-builder-lib/out/codeSign/macCodeSign').sign) {
+// electron-builder kalder sign med flere argumenter, så signeringsfunktionen kan kun gives med via signWith.
+async function sign(options) { return signWith(options, require('app-builder-lib/out/codeSign/macCodeSign').sign); }
+async function signWith(options, signer) {
   const fs = require('node:fs/promises'), integrity = require('./runtime-integrity.cjs');
   const resources = path.join(options.app, 'Contents', 'Resources');
   const manifest = JSON.parse(await fs.readFile(path.join(resources, 'runtime', 'manifest.json'), 'utf8'));
@@ -21,4 +23,4 @@ async function sign(options, signer = require('app-builder-lib/out/codeSign/macC
   await signer(signingOptions(options));
   await require('./signed-runtime-proof.cjs').record(resources, manifest.target, prepared.payloads);
 }
-module.exports = { sign, signingOptions };
+module.exports = { sign, signWith, signingOptions };

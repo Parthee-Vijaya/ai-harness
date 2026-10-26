@@ -86,7 +86,7 @@ test('macOS-signeringen får en kvittering pr. bygning; senere ændringer og and
 
 test('signeringen kontrollerer runtime før signering og gemmer kvitteringen efter', { skip: process.platform !== 'darwin' }, async t => {
   const { execFileSync } = require('node:child_process');
-  const { sign } = require('../scripts/sign-mac.cjs'), { receiptPath } = require('../scripts/signed-runtime-proof.cjs');
+  const { sign, signWith } = require('../scripts/sign-mac.cjs'), { receiptPath } = require('../scripts/signed-runtime-proof.cjs');
   const target = 'darwin-syntetisk-sign', prepared = path.join(__dirname, '..', '.runtime', target);
   const app = path.join(await fs.mkdtemp(path.join(os.tmpdir(), 'aura-sign-')), 'Aura.app'), resources = path.join(app, 'Contents', 'Resources');
   t.after(() => fs.rm(path.dirname(app), { recursive: true, force: true })); t.after(() => fs.rm(prepared, { recursive: true, force: true }));
@@ -99,11 +99,13 @@ test('signeringen kontrollerer runtime før signering og gemmer kvitteringen eft
   const receipt = await receiptPath(resources, target); t.after(() => fs.rm(receipt, { force: true }));
   const calls = [];
   const signer = async () => { calls.push('signér'); execFileSync('/usr/bin/codesign', ['--force', '--sign', '-', path.join(resources, 'runtime', 'tool')], { stdio: 'pipe' }); };
-  await sign({ app }, signer);
+  await signWith({ app }, signer);
   assert.deepEqual(calls, ['signér']);
   assert.equal(JSON.parse(await fs.readFile(receipt, 'utf8')).target, target, 'kvitteringen er gemt');
   // En runtime, der er ændret før signeringen, stopper pakningen, før der signeres.
   await fs.appendFile(path.join(resources, 'runtime', 'tool'), 'ændret');
-  await assert.rejects(sign({ app }, signer), /Runtime-payload/);
+  await assert.rejects(signWith({ app }, signer), /Runtime-payload/);
   assert.deepEqual(calls, ['signér']);
+  // electron-builder kalder sign med et ekstra argument; det må ikke tages for signeringsfunktionen.
+  assert.equal(sign.length, 1);
 });
