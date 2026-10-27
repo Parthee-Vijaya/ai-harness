@@ -76,6 +76,17 @@ const helpers = require('./ui-test-helpers.cjs');
     await page.locator('#run-status').filter({ hasText: 'Klar' }).waitFor({ timeout: 30000 });
     assert.equal(await page.isVisible('#agent-activity'), false);
     assert.match(await page.locator('#usage-status').textContent(), /20.*10/);
+    // Kontekstmålingen står i statuslinjens detaljer med det faktisk målte kald, aldrig samtalens samlede forbrug.
+    const kontekst = await page.locator('#usage-status').getAttribute('title');
+    assert.match(kontekst, /Seneste modelkald brugte 20 af [\d.]+ tokens kontekst/);
+    assert.match(kontekst, /ikke samtalens samlede forbrug/);
+    assert.equal(await page.isVisible('#context-warning'), false, 'langt fra grænsen står der ingen advarsel i første lag');
+    // Advarslen nær grænsen vises i den rigtige brugerflade med syntetiske tal; prøven kan ikke nå 200.000 tokens.
+    await page.evaluate(() => { window.maaltKontekst = view.contextUsage; view.contextUsage = { ...view.contextUsage, known: true, inputTokens: 170000, limitTokens: 200000, percentage: 85, reason: null }; renderContextUsage(); });
+    assert.match(await page.locator('#context-warning').textContent(), /85 % af grænsen på 200\.000 tokens/);
+    assert.match(await page.locator('#usage-status').getAttribute('title'), /170\.000 af 200\.000 tokens/);
+    await page.evaluate(() => { view.contextUsage = window.maaltKontekst; delete window.maaltKontekst; renderContextUsage(); });
+    assert.equal(await page.isVisible('#context-warning'), false, 'advarslen forsvinder igen med den rigtige måling');
     const instructions = JSON.stringify(requests[0].messages);
     assert.match(instructions, /Python med FastAPI/); assert.match(instructions, /Node.js med TypeScript/);
     // Udgivelsesvejledningen fra core/hosting-guidance.cjs når modellen uændret. Udgivelse er ikke slået til i prøven.
@@ -83,7 +94,7 @@ const helpers = require('./ui-test-helpers.cjs');
     assert.match(instructions, /Azure Static Web Apps, Cloudflare Pages, GitHub Pages, komplai Run, Promte Apps og Vercel/); assert.match(instructions, /Netlify Drop har vejledning, men ingen uploadintegration/);
     assert.match(instructions, /pladsholder, ikke et vedtaget design/);
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ status: 'bestået', root, requests: requests.length, checks: ['mappeadgang', 'synlig opstart', 'lang tavshed', 'rigtig streaming', 'fire farveformater', 'HTML som tekst', 'manuel rulning', 'seneste svar', 'reduceret bevægelse', 'faktiske tokens', 'Python/Node/hosting i modelkald'] }));
+    console.log(JSON.stringify({ status: 'bestået', root, requests: requests.length, checks: ['mappeadgang', 'synlig opstart', 'lang tavshed', 'rigtig streaming', 'fire farveformater', 'HTML som tekst', 'manuel rulning', 'seneste svar', 'reduceret bevægelse', 'faktiske tokens', 'kontekstmåling i detaljerne og advarsel nær grænsen', 'Python/Node/hosting i modelkald'] }));
   } catch (error) { if (app) await (await app.firstWindow()).screenshot({ path: path.join(root, 'fejl.png') }).catch(() => {}); console.error('Evidens:', root, errors); throw error; }
   finally { release?.(); finish?.(); await fs.chmod(project, 0o700); await app?.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

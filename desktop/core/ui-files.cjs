@@ -9,6 +9,7 @@ module.exports = new Set([
   'chat-display.js',
   'chats.js',
   'connection-overview.js',
+  'context-display.js',
   'conversation-mode.js',
   'demo.css',
   'deployment-setup.js',
