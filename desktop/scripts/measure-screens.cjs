@@ -138,7 +138,7 @@ const server = http.createServer(async (req, res) => {
     // Fortryd og versioner.
     begin('Fortryd opgaven');
     await click('#run-review .result-options > summary');
-    await click('#run-review button >> text=Fortryd opgaven'); await win.waitForFunction(() => !document.querySelector('#restore-confirm').disabled);
+    await (await helpers.resultOption(win, 'Fortryd opgaven')).click(); await win.waitForFunction(() => !document.querySelector('#restore-confirm').disabled);
     await measure('fortryd', '#restore-dialog', 'Fortryd opgaven');
     await click('#restore-confirm'); await win.waitForSelector('#restore-dialog:not([open])', { state: 'attached' }); task = null;
     if (!withoutVersions) {

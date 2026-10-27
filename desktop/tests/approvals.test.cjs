@@ -50,7 +50,16 @@ test('afvisning med en besked sendes til motoren og stopper ikke; Stop giver et 
   const events = [], calls = [];
   const bench = new Workbench({ directory: path.join(directory, 'data'), profiles, emit: event => events.push(event), safeStorage: {} });
   await bench.activate({ root, name: 'Prøve' }); const chat = bench.chat;
-  chat.engine = { pending: new Map([['p1', { permission: 'bash' }], ['p2', { permission: 'bash' }]]), reply: async (...args) => calls.push(args), abort: async () => {}, close: async () => {} };
+  chat.running = true; chat.runMode = 'build';
+  chat.engine = { pending: new Map(), reply: async (...args) => calls.push(args), abort: async () => {}, close: async () => {} };
+  // Godkendelsen skal komme ad appens egen vej, så den har kontekst, fingeraftryk og en ventende anmodning i motoren.
+  const ask = async id => {
+    const properties = { id, permission: 'bash', metadata: {}, patterns: [] };
+    chat.engine.pending.set(id, properties);
+    await chat.permissionAsked({ type: 'permission.asked', properties });
+  };
+  await ask('p1'); await ask('p2');
+  assert.equal(chat.approvals.size, 2, 'begge godkendelser venter på svar');
   await bench.reply({ id: 'p1', allow: false, message: '  Brug ikke npm. Skriv det i ren JavaScript.  ' });
   await bench.reply({ id: 'p2', allow: false });
   assert.deepEqual(calls, [['p1', false, 'Brug ikke npm. Skriv det i ren JavaScript.'], ['p2', false, '']]);
@@ -58,7 +67,7 @@ test('afvisning med en besked sendes til motoren og stopper ikke; Stop giver et 
   assert.equal(bench.activityList().find(entry => entry.id === 'approval-p2').status, 'rejected');
   // En kørende opgave stoppes, efter at AI'en har skrevet en fil og kørt en kommando med fejl.
   const { capture } = require('../core/changes.cjs');
-  chat.running = true; chat.runMode = 'build'; chat.runBefore = await capture(root); chat.runTools = new Map(); chat.runFailure = null;
+  chat.runBefore = await capture(root); chat.runTools = new Map(); chat.runFailure = null;
   chat.task = { id: 'opgave', root, label: 'Byg', mode: 'build', startedAt: 1, aiFiles: new Set(), aiHashes: new Map(), reads: [], completed: new Set(), commandParts: new Set(), commands: 0 };
   await fs.writeFile(path.join(root, 'a.txt'), 'efter\n');
   chat.runTools.set('t1', { id: 't1', tool: 'bash', state: { status: 'completed', input: { command: 'npm test' }, title: 'npm test', output: 'linje 1\nlinje 2\nFEJL: 1 test fejlede\ntoken=sk-abcdefghijklmnopqrstuv', metadata: { exit: 1 } } });
@@ -77,12 +86,19 @@ test('godkendelsen får værktøjets egne oplysninger med, og en fejl fra OpenCo
   const bench = new Workbench({ directory: path.join(directory, 'data'), profiles, emit: event => events.push(event), safeStorage: {} });
   await bench.activate({ root: directory, name: 'Prøve' }); const chat = bench.chat;
   chat.running = true; chat.runTools = new Map([['del', { id: 'del', callID: 'kald-1', tool: 'bash', state: { status: 'running', input: { command: 'npm test', description: 'Kører testene', workdir: path.join(directory, 'web') } } }]]);
-  chat.event({ type: 'permission.asked', properties: { id: 'p', permission: 'bash', patterns: ['npm test'], metadata: {}, tool: { messageID: 'm', callID: 'kald-1' } } });
+  const properties = { id: 'p', permission: 'bash', patterns: ['npm test'], metadata: {}, tool: { messageID: 'm', callID: 'kald-1' } };
+  // Uden en ventende anmodning i motoren vises godkendelsen ikke; det er netop meningen.
+  chat.engine = { pending: new Map(), reply: async () => {}, abort: async () => {}, close: async () => {} };
+  await chat.permissionAsked({ type: 'permission.asked', properties });
+  assert.equal(events.some(event => event.type === 'permission.asked'), false, 'en godkendelse uden anmodning i motoren vises ikke');
+  chat.engine.pending.set('p', properties);
+  await chat.permissionAsked({ type: 'permission.asked', properties });
   const asked = events.find(event => event.type === 'permission.asked');
-  assert.deepEqual(asked.properties.toolInput, { tool: 'bash', command: 'npm test', description: 'Kører testene', workdir: path.join(directory, 'web'), url: undefined });
+  const input = { command: 'npm test', description: 'Kører testene', workdir: path.join(directory, 'web') };
+  assert.deepEqual(asked.properties.toolInput, { ...input, tool: 'bash', input });
   chat.event({ type: 'session.error', properties: { error: { name: 'APIError', data: { message: 'Rate limit', statusCode: 429 } } } });
   assert.deepEqual(chat.runFailure, { kind: 'limit', status: 429, message: 'Rate limit' });
-  chat.running = false; await bench.close();
+  chat.running = false; chat.engine = null; await bench.close();
 });
 
 test('en lang ændring vises 400 rækker ad gangen, og kun rigtige linjer tælles', () => {

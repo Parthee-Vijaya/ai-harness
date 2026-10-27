@@ -74,16 +74,20 @@ const http = require('node:http');
     await page.waitForFunction(() => document.querySelector('#prompt').value === 'Husk plads til fem aktiviteter.');
     // Vilkårene er accepteret for projektet før genstarten. Bygningen sender planen uden at vise resuméet igen.
     await page.fill('#prompt', ''); await page.click('#build-plan');
-    await page.locator('#approvals button').filter({ hasText: 'Kun denne fil' }).waitFor({ timeout: 60000 });
+    await require('./ui-test-helpers.cjs').awaitApproval(page, { timeout: 60000 });
     assert.equal(await page.locator('#data-dialog').evaluate(el => el.open), false);
     assert.ok(requests.some(r => JSON.stringify(r.messages).includes('fælleshuset')));
     assert.equal(await fs.readFile(path.join(project, 'public/index.html'), 'utf8'), '<h1>Før bygning</h1>');
-    await page.locator('#approvals button').filter({ hasText: 'Kun denne fil' }).click();
+    await require('./ui-test-helpers.cjs').approve(page, 'Tillad én gang');
     await page.frameLocator('#preview').locator('h1').filter({ hasText: 'Fælleshuset er klar' }).waitFor({ timeout: 30000 });
     await page.locator('#run-status').filter({ hasText: 'Klar' }).waitFor({ timeout: 30000 });
-    await page.click('#resume-notice > summary'); await page.check('#include-history'); await require('./ui-test-helpers.cjs').selectMode(page, 'plan'); await draft('Vurder næste skridt.'); await page.click('#send');
-    await page.waitForSelector('#data-dialog[open]'); assert.match(await page.locator('#data-history-text').textContent(), /medsendes efter dit tilvalg/);
-    await page.click('#accept-send'); await page.locator('#run-status').filter({ hasText: 'Klar' }).waitFor({ timeout: 60000 });
+    await page.click('#resume-notice > summary'); await page.check('#include-history'); await require('./ui-test-helpers.cjs').selectMode(page, 'plan'); await draft('Vurder næste skridt.');
+    // Tilvalget af historik ændrer ikke modtager, model, vilkår eller pris, så resuméet gentages ikke; se DESIGN.md.
+    await page.click('#send');
+    assert.equal(await page.locator('#data-dialog').evaluate(el => el.open), false, 'et tilvalg af historik gentager ikke resuméet');
+    // "Klar" står der allerede, før der sendes, så prøven venter på selve modelkaldet med historikken.
+    for (let round = 0; round < 180; round++) { if (requests.some(r => JSON.stringify(r.messages).includes('Tidligere samtale, som brugeren har valgt'))) break; await new Promise(resolve => setTimeout(resolve, 500)); }
+    await page.locator('#run-status').filter({ hasText: 'Klar' }).waitFor({ timeout: 60000 });
     assert.ok(requests.some(r => JSON.stringify(r.messages).includes('Tidligere samtale, som brugeren har valgt') && JSON.stringify(r.messages).includes('violet-cykel')));
     // Ny samtale starter en tom samtale ved siden af den gamle, som bevares i sidepanelet; projektfilerne er uændrede.
     await page.click('#project-list .project-entry.is-current .project-add'); await page.waitForFunction(() => document.querySelector('#messages').textContent === '');

@@ -59,9 +59,9 @@ const helpers = require('./ui-test-helpers.cjs');
     await page.click('#send');
     await page.waitForFunction(() => document.querySelector('#data-dialog').open || !document.querySelector('#stop').hidden);
     if (await page.locator('#data-dialog').evaluate(el => el.open)) await page.click('#accept-send');
-    await page.locator('#approvals button').filter({ hasText: 'Tillad for denne opgave' }).click({ timeout: 90000 });
+    await helpers.approve(page, 'Tillad for denne opgave');
     await heading(`Udkast ${writes}`);
-    await page.locator('#run-review button').filter({ hasText: expectVersion ? 'Fortryd opgaven' : 'Gennemgå ændringer' }).waitFor({ timeout: 90000 });
+    await helpers.resultOption(page, expectVersion ? 'Fortryd opgaven' : 'Se ændringer');
     await page.waitForFunction(() => document.querySelector('#run-status').textContent === 'Klar');
     assert.equal(prompts.length, before + 1, 'én ny opgave nåede modellen');
     return prompts.at(-1);
@@ -113,8 +113,8 @@ const helpers = require('./ui-test-helpers.cjs');
     await page.click('#project-menu-toggle');
     assert.equal(await page.isVisible('#git-button'), true); assert.equal(await page.isVisible('#publish-button'), false);
     await page.keyboard.press('Escape');
-    // Standardtilstanden er Samtale; prøven arbejder direkte, som uden planlægning.
-    assert.equal(await page.inputValue('#work-mode'), 'chat');
+    // Et nyt projekt starter i Byg; se DESIGN.md. Prøven arbejder direkte, som uden planlægning.
+    assert.equal(await page.inputValue('#work-mode'), 'free');
     await page.click('#composer-mode'); await page.selectOption('#work-mode', 'free'); await page.click('[data-close="task-dialog"]');
     assert.match(await page.inputValue('#prompt'), /tre fiktive mødelokaler/);
     // 3. Første opgave: kun Git-skillen kan hentes, og appens regler følger funktionerne.
@@ -123,8 +123,8 @@ const helpers = require('./ui-test-helpers.cjs');
     await page.click('#send'); await page.waitForSelector('#data-dialog[open]');
     assert.match(await page.textContent('#data-details'), /Skills, AI’en kan hente\s*Git og samarbejde/);
     await page.click('#accept-send');
-    await page.locator('#approvals button').filter({ hasText: 'Tillad for denne opgave' }).click({ timeout: 90000 });
-    await heading('Udkast 1'); await page.locator('#run-review button').filter({ hasText: 'Fortryd opgaven' }).waitFor({ timeout: 90000 });
+    await helpers.approve(page, 'Tillad for denne opgave');
+    await heading('Udkast 1'); await helpers.resultOption(page, 'Fortryd opgaven');
     await page.waitForFunction(() => document.querySelector('#run-status').textContent === 'Klar');
     assert.deepEqual(prompts[0].skills, ['harness-git-og-samarbejde']);
     for (const text of ['APPENS REGLER', 'FÆLLES-GRUNDLAG-02', 'slået planlægning før bygning fra', 'Udgivelse er slået fra', 'gemmer selv en version efter hver AI-opgave']) assert.ok(prompts[0].system.includes(text), text);
@@ -142,9 +142,14 @@ const helpers = require('./ui-test-helpers.cjs');
     await skillsInfo.click(); await page.waitForFunction(() => !document.querySelector('#info-pop').matches(':popover-open'));
     assert.equal(await skillsInfo.getAttribute('aria-expanded'), 'false');
     await page.locator('#features-scope label').filter({ hasText: 'Kun' }).click();
-    // Et skift af Planlægning sætter arbejdsmåden tilbage til standarden, Samtale, når der ikke er en plan i gang.
+    // Planlægning slået til rører ikke den valgte arbejdsmåde.
     await toggle('#features-list', 'planlaegning').check();
-    await page.waitForFunction(() => document.querySelector('#work-mode').value === 'chat');
+    assert.equal(await page.inputValue('#work-mode'), 'free', 'et tilvalg ændrer ikke arbejdsmåden');
+    // Men slås Planlægning fra, mens man står i Planlæg, falder arbejdsmåden tilbage til standarden, Samtale.
+    await page.click('[data-close="features-dialog"]');
+    await page.click('#composer-mode'); await page.selectOption('#work-mode', 'plan'); await page.click('[data-close="task-dialog"]');
+    await helpers.menuClick(page, '#features-button'); await page.waitForSelector('#features-dialog[open]');
+    await page.locator('#features-scope label').filter({ hasText: 'Kun' }).click();
     await page.locator('#features-list .feature-row[data-feature="planlaegning"] button').filter({ hasText: 'Brug standarden' }).click();
     await page.waitForFunction(() => document.querySelector('#work-mode').value === 'chat');
     assert.deepEqual((await features()).exceptions, {});

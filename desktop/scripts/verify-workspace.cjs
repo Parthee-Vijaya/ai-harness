@@ -117,8 +117,7 @@ const helpers = require('./ui-test-helpers.cjs');
     // Opgave 1: AI'en skriver siden og kører en kommando. Brugeren undersøger Kode imens og retter sine egne noter.
     await page.click('#tab-code'); await page.click('#code-files .code-file[data-path="src/app.js"]');
     await page.click('#send'); await page.waitForSelector('#data-dialog[open]'); await page.click('#accept-send');
-    const allowTask = page.locator('#approvals button').filter({ hasText: 'Tillad for denne opgave' });
-    await allowTask.waitFor({ timeout: 90000 });
+    await helpers.awaitApproval(page);
     assert.equal(await selected(), 'code');
     await page.focus('#prompt'); await page.keyboard.type('Næste idé');
     await page.locator('#activity-badge.waiting').waitFor();
@@ -131,7 +130,7 @@ const helpers = require('./ui-test-helpers.cjs');
     assert.match(await page.locator('#activity-status').textContent(), /Venter på dig: ændre en fil/);
     await page.screenshot({ path: path.join(root, 'aktivitet-venter.png'), animations: 'disabled' });
     await page.click('#tab-code');
-    await allowTask.click();
+    await helpers.approve(page, 'Tillad for denne opgave');
     const allowOnce = page.locator('#approvals button').filter({ hasText: 'Tillad én gang' });
     await allowOnce.waitFor({ timeout: 90000 }); await allowOnce.click();
     await page.locator('#run-status').filter({ hasText: 'Klar' }).waitFor({ timeout: 90000 });
@@ -185,10 +184,17 @@ const helpers = require('./ui-test-helpers.cjs');
     await page.click('#code-reference');
     assert.match(await page.locator('#composer-refs').innerText(), /src\/app\.js · linje 2/);
     assert.equal(await page.evaluate(() => document.activeElement.id), 'prompt');
-    await page.fill('#prompt', 'Hvad gør linjen?'); await page.click('#send');
-    await page.waitForSelector('#data-dialog[open]');
-    assert.match(await page.locator('#data-refs-text').textContent(), /Filhenvisninger: src\/app\.js \(linje 2\)/);
-    await page.click('#accept-send'); await page.locator('#run-status').filter({ hasText: 'Klar' }).waitFor({ timeout: 90000 });
+    await page.fill('#prompt', 'Hvad gør linjen?');
+    // En intern filhenvisning gentager ikke et allerede accepteret resumé; teksten står stadig under Se data.
+    await page.click('#send');
+    assert.equal(await page.locator('#data-dialog').evaluate(el => el.open), false, 'resuméet vises ikke igen for en intern filhenvisning');
+    // "Klar" står der allerede, før der sendes, så prøven venter på selve modelkaldet.
+    const awaitRequest = async match => {
+      for (let round = 0; round < 180; round++) { if (requests.some(body => JSON.stringify(body.messages).includes(match))) return; await new Promise(resolve => setTimeout(resolve, 500)); }
+      throw new Error(`Modelkaldet med "${match}" kom aldrig.`);
+    };
+    await awaitRequest('Hvad gør linjen?');
+    await page.locator('#run-status').filter({ hasText: 'Klar' }).waitFor({ timeout: 90000 });
     const asked = requests.filter(body => JSON.stringify(body.messages).includes('Hvad gør linjen?')).at(-1);
     assert.match(JSON.stringify(asked.messages), /Filhenvisninger fra Aura \(læs selv filerne i projektet\):\\n- src\/app\.js \(linje 2\)/);
     assert.equal(await page.isVisible('#composer-refs'), false);

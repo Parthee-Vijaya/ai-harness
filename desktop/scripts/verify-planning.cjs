@@ -98,8 +98,8 @@ const questions = [
     await helpers.addConnection(page, { name: 'Kontrolleret plan', baseURL: `http://127.0.0.1:${server.address().port}/v1` });
     const connection = (await page.evaluate(() => window.harness.connectionState())).value.connections[0].id;
     await helpers.taskOptions(page); await page.selectOption('#connection-select', connection); await page.locator('#model-shortlist button').first().click();
-    // Samtale er standard. Prøvens afklaring og plan kræver Planlæg.
-    assert.equal(await page.inputValue('#work-mode'), 'chat');
+    // Et nyt projekt starter i Byg; se DESIGN.md. Prøvens afklaring og plan kræver Planlæg.
+    assert.equal(await page.inputValue('#work-mode'), 'free');
     await helpers.selectMode(page, 'plan');
 
     // Første besked: Før du sender viser briefen under alle oplysninger.
@@ -178,7 +178,7 @@ const questions = [
     passed('Brugeren retter en linje i briefen og selve planen; planen siger, at briefen er ændret bagefter');
 
     await page.click('#plan-build');
-    const allow = page.locator('#approvals button').filter({ hasText: 'Tillad for denne opgave' }); await allow.waitFor({ timeout: 90000 }); await allow.click();
+    await helpers.approve(page, 'Tillad for denne opgave');
     await page.locator('#run-status').filter({ hasText: 'Klar' }).waitFor({ timeout: 90000 });
     const build = requests.find(body => JSON.stringify(body.messages).includes('Byg efter denne plan'));
     assert.match(JSON.stringify(build.messages), /som brugeren har valgt og selv rettet/);

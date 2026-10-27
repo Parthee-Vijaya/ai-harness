@@ -65,9 +65,9 @@ async function answerApprovals() {
       await box.locator('textarea').fill('Følg den konkrete idé: lokal HTML/CSS/JavaScript, de tre fiktive lokaler og filteret. Ingen installation eller deling.');
       await box.getByRole('button', { name: 'Svar', exact: true }).click(); continue;
     }
-    const once = box.getByRole('button', { name: 'Kun denne fil', exact: true });
+    const once = box.getByRole('button', { name: 'Tillad én gang', exact: true });
     const target = await box.locator('.action-target').textContent().catch(() => '');
-    // UI tilbyder Kun denne fil alene for projektinterne rettelser; begræns også til public/.
+    // UI tilbyder Tillad én gang alene for projektinterne rettelser; begræns også til public/.
     const allowed = await once.count() && /^public\/[a-zA-Z0-9_./-]+\.(html|css|js)$/.test(target) && !target.split('/').includes('..');
     approvals.push({ stage, target, allowed: Boolean(allowed) });
     await shot(`${stage}-godkendelse`);
@@ -176,7 +176,7 @@ async function main() {
     await page.fill('#prompt', correction); await runUntilDone('rettelse', () => page.click('#send'));
     await check('AI-rettelsen ændrer overskrift og bevarer funktionen', () => tryFilter('Find dit mødelokale'));
     const changed = await snapshot(); assert.notDeepEqual(changed, before); report.changed = hashes(changed); await shot('rettet');
-    await page.locator('#run-review').getByRole('button', { name: 'Fortryd opgaven', exact: true }).click();
+    await (await helpers.resultOption(page, 'Fortryd opgaven')).click();
     await page.waitForSelector('#restore-dialog[open]'); await page.waitForFunction(() => !document.querySelector('#restore-confirm').disabled);
     await shot('gennemgaa-fortrydelse'); await page.click('#restore-confirm'); await page.waitForSelector('#restore-dialog', { state: 'hidden' });
     await check('Fortryd genskaber byteidentiske projektfiler', async () => assert.deepEqual(await snapshot(), before));

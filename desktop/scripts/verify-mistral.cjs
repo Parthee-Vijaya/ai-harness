@@ -108,7 +108,7 @@ async function main() {
     phase = 'build'; calls = 0;
     await page.click('#build-plan');
     await page.waitForSelector('#approvals .approval', { timeout: 60000 });
-    await page.locator('#approvals button').filter({ hasText: 'Tillad for denne opgave' }).click();
+    await helpers.approve(page, 'Tillad for denne opgave');
     await finished();
     assert.match(await fs.readFile(file, 'utf8'), /En ny startside/);
     await page.frameLocator('#preview').locator('h1').filter({ hasText: 'En ny startside' }).waitFor();

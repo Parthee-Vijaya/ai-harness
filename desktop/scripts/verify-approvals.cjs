@@ -54,7 +54,8 @@ const helpers = require('./ui-test-helpers.cjs');
   const capture = async name => { const png = await app.evaluate(async ({ BrowserWindow }) => (await BrowserWindow.getAllWindows().find(w => w.webContents.getURL().startsWith('harness://')).webContents.capturePage()).toPNG().toString('base64')); await fs.writeFile(path.join(root, name), Buffer.from(png, 'base64')); };
   const send = async text => {
     await page.fill('#prompt', text); await page.click('#send');
-    await page.waitForFunction(() => document.querySelector('#data-dialog').open || !document.querySelector('#stop').hidden || /Fejl|Klar/.test(document.querySelector('#run-status').textContent));
+    // "Klar" står der allerede, før der sendes, så den må ikke tælle med: ellers blev dialogen set, før den åbnede.
+    await page.waitForFunction(() => document.querySelector('#data-dialog').open || !document.querySelector('#stop').hidden || /Fejl/.test(document.querySelector('#run-status').textContent));
     if (await page.locator('#data-dialog').evaluate(el => el.open)) await page.click('#accept-send');
   };
   const idle = () => page.waitForFunction(() => document.querySelector('#stop').hidden, null, { timeout: 90000 });
@@ -79,7 +80,7 @@ const helpers = require('./ui-test-helpers.cjs');
     assert.equal(await card.locator('details').first().evaluate(el => el.open), false);
     await card.locator('summary', { hasText: 'Se ændringen' }).click();
     assert.match(await card.locator('.approval-diff').innerText(), /Tilføjet:\s*<!doctype html>[^\n]*<h1>Find et lokale<\/h1>/);
-    assert.match(await card.locator('.approval-scope').textContent(), /kun filer i projektmappen, til opgaven slutter/);
+    assert.match(await card.locator('.approval-scope').textContent(), /En gemt tilladelse gælder projektets filer/);
     assert.equal(await page.locator('#run-status').textContent(), 'Venter på dig');
     assert.equal(await page.locator('#agent-activity-text').textContent(), 'Venter på dig: Må AI’en ændre filer i projektet?');
     assert.equal(await page.isVisible('#connection-warning'), false);
@@ -89,14 +90,14 @@ const helpers = require('./ui-test-helpers.cjs');
     await capture('godkendelse-fil.png');
     passed('Filgodkendelsen viser filen, antal linjer, ændringen og omfanget; statuslinjen siger, at AI’en venter, og Vis fører til kortet');
 
-    await card.locator('button', { hasText: 'Kun denne fil' }).click();
+    await card.getByRole('button', { name: 'Tillad én gang', exact: true }).click();
     const command = page.locator('#approvals .approval').first(); await command.locator('.approval-kind', { hasText: 'Kommando' }).waitFor({ timeout: 90000 });
     assert.equal(await command.locator('code.action-target').textContent(), 'echo "1 test fejlede" && exit 1');
     assert.match(await command.locator('.approval-facts').innerText(), /Hvorfor\s+AI’ens begrundelse: Kører testene/);
     assert.match(await command.locator('.approval-hints').innerText(), /Ser ud til kun at læse eller vise noget/);
     assert.match(await command.locator('.approval-facts').innerText(), /Et gæt ud fra kommandoens tekst, ikke en kontrol/);
     assert.equal(await command.locator('.approval-actions button.primary').count(), 0, 'en kommando har ingen fremhævet Tillad-knap');
-    assert.match(await page.locator('#messages .answer-record').last().textContent(), /Du gav AI’en lov til at ændre filer i projektet: public\/index\.html\./);
+    assert.match(await page.locator('#messages .answer-record').last().textContent(), /1 handling godkendt/);
     await command.locator('button', { hasText: 'Tillad én gang' }).click();
     await idle();
     passed('Kommandokortet viser kommandoen, AI’ens begrundelse og et gæt i almindeligt dansk uden en fremhævet Tillad');
@@ -145,7 +146,7 @@ const helpers = require('./ui-test-helpers.cjs');
     // Stop efter en filændring: kortet viser det, AI'en nåede, og kan fortryde det.
     await page.fill('#prompt', '');
     await send('STOP undervejs');
-    const allowTask = page.locator('#approvals button', { hasText: 'Tillad for denne opgave' }); await allowTask.waitFor({ timeout: 90000 }); await allowTask.click();
+    await require('./ui-test-helpers.cjs').approve(page, 'Tillad for denne opgave');
     await page.locator('#messages .assistant', { hasText: 'Jeg arbejder videre' }).waitFor({ timeout: 90000 });
     await page.click('#stop'); await page.locator('#run-status').filter({ hasText: 'Stoppet' }).waitFor({ timeout: 30000 });
     await review.locator('h3', { hasText: 'Du stoppede opgaven' }).waitFor();

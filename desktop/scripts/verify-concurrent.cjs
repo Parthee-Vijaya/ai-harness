@@ -57,9 +57,9 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     await helpers.selectMode(page, 'free'); await page.fill('#prompt', text); await page.click('#send');
     await page.waitForFunction(() => document.querySelector('#data-dialog').open || !document.querySelector('#stop').hidden);
     if (await page.locator('#data-dialog').evaluate(e => e.open)) await page.click('#accept-send');
-    await page.locator('#approvals button').filter({ hasText: 'Kun denne fil' }).waitFor();
+    await helpers.awaitApproval(page);
   };
-  const allow = async () => { await page.locator('#approvals button').filter({ hasText: 'Kun denne fil' }).click(); await page.locator('#stop').waitFor({ state: 'hidden' }); };
+  const allow = async () => { await helpers.approve(page, 'Tillad én gang'); await page.locator('#stop').waitFor({ state: 'hidden' }); };
   const call = async (method, input) => { const result = await page.evaluate(({ method, input }) => window.harness[method](input), { method, input }); assert.equal(result.ok, true, result.error); return result.value; };
   let singleImageChecks = 0;
   const merge = async () => {

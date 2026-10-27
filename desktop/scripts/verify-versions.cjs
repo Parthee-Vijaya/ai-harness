@@ -55,18 +55,18 @@ const helpers = require('./ui-test-helpers.cjs');
     const connection = await helpers.addConnection(page, { name: 'Kontrolleret model', baseURL: `http://127.0.0.1:${server.address().port}/v1` });
     await helpers.taskOptions(page); await page.selectOption('#connection-select', connection.id);
     await page.waitForFunction(() => document.querySelector('#model-select').options.length === 2); await page.locator('#model-shortlist button').first().click();
-    // Samtale er standard. Opgaven bygges efter en plan, så prøven vælger Planlæg.
-    assert.equal(await page.inputValue('#work-mode'), 'chat'); await helpers.selectMode(page, 'plan');
+    // Et nyt projekt starter i Byg; se DESIGN.md. Opgaven bygges efter en plan, så prøven vælger Planlæg.
+    assert.equal(await page.inputValue('#work-mode'), 'free'); await helpers.selectMode(page, 'plan');
     // 2. En AI-opgave gemmes automatisk som en version, og kortet tilbyder at fortryde den.
     await page.click('#send'); await page.waitForSelector('#data-dialog[open]'); await page.click('#accept-send');
     await page.waitForSelector('#plan-card:not([hidden])', { timeout: 60000 }); await page.waitForFunction(() => !document.querySelector('#build-plan').disabled);
     await page.click('#build-plan');
-    await page.locator('#approvals button').filter({ hasText: 'Tillad for denne opgave' }).click({ timeout: 60000 });
-    await heading('Tre mødelokaler'); await page.locator('#run-review button').filter({ hasText: 'Fortryd opgaven' }).waitFor({ timeout: 60000 });
+    await helpers.approve(page, 'Tillad for denne opgave', { timeout: 60000 });
+    await heading('Tre mødelokaler'); await helpers.resultOption(page, 'Fortryd opgaven', { timeout: 60000 });
     assert.match((await log())[0], /^AI-opgave: Byg første udkast/); assert.equal(await clean(), true);
     await page.screenshot({ path: path.join(root, 'fortryd-tilbud.png'), animations: 'disabled' });
     // 3. Fortryd sætter filerne tilbage til før opgaven og gemmer det som en ny version.
-    await page.locator('#run-review button').filter({ hasText: 'Fortryd opgaven' }).click();
+    (await helpers.resultOption(page, 'Fortryd opgaven')).click();
     await page.waitForSelector('#restore-dialog[open]'); assert.equal(await page.locator('#restore-title').textContent(), 'Fortryd opgaven');
     await page.waitForFunction(() => !document.querySelector('#restore-confirm').disabled); await page.click('#restore-confirm');
     await page.waitForSelector('#restore-dialog:not([open])', { state: 'attached' });

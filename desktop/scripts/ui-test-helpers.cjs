@@ -146,6 +146,30 @@ async function chooseProviderCard(page, kind) {
   if (!await page.locator(`#provider-cards [data-kind="${kind}"]`).count()) await page.click('#provider-more');
   await page.click(`[data-kind="${kind}"]`);
 }
+// Godkendelseskortet viser Tillad én gang, Tillad altid i projektet og Afvis. Tillad for denne opgave og Tillad en
+// mappe fremover ligger bag Flere valg, jf. DESIGN.md. Hjælperen venter på kortet, folder Flere valg ud, hvis
+// knappen ligger der, og klikker så. scope afgrænser til ét bestemt kort, når der er flere.
+async function approve(page, label = 'Tillad én gang', { timeout = 90000, scope } = {}) {
+  const box = scope || page.locator('#approvals');
+  const button = box.getByRole('button', { name: label, exact: true }).first();
+  const more = box.getByRole('button', { name: 'Flere valg', exact: true }).first();
+  await box.getByRole('button', { name: 'Afvis', exact: true }).first().waitFor({ timeout });
+  if (!await button.isVisible()) await more.click();
+  await button.click();
+}
+// Venter på, at et godkendelseskort er fremme, uden at svare på det.
+async function awaitApproval(page, { timeout = 90000, scope } = {}) {
+  await (scope || page.locator('#approvals')).getByRole('button', { name: 'Afvis', exact: true }).first().waitFor({ timeout });
+}
+// Resultatkortets sekundære valg, fx Fortryd opgaven, ligger bag Flere valg. Hjælperen folder ud og giver knappen.
+async function resultOption(page, label, { timeout = 90000 } = {}) {
+  const box = page.locator('#run-review');
+  const button = box.getByRole('button', { name: label, exact: true }).first();
+  await box.locator('.review-actions').first().waitFor({ timeout });
+  if (!await button.isVisible()) await box.locator('.result-options > summary').first().click();
+  await button.waitFor({ timeout: 15000 });
+  return button;
+}
 // Hovedvinduet må ikke have et felt, en nøgle kan skrives i.
 async function assertNoKeyFields(page) {
   const found = await page.evaluate(() => [...document.querySelectorAll('input[type=password], #api-key, #hosting-token, #deployment-token')].map(el => el.id || el.type));
@@ -160,4 +184,4 @@ async function firstVersion(page, projectDir, title) {
   await fs.writeFile(index, (await fs.readFile(index, 'utf8')).replace('HER BEGYNDER DIN IDÉ', 'FØRSTE VERSION'));
   await page.frameLocator('#preview').locator('h1').filter({ hasText: title }).waitFor({ timeout: 15000 });
 }
-module.exports = { firstVersion, openSetup, addConnection, chooseProviderCard, keyWindow, enterCredential, assertNoKeyFields, enableSharing, skipIntroduction, toOnboarding, menuClick, taskOptions, closeTaskOptions, selectMode, previewOptions, projectOptions, isolateDocuments, chooseLocation, openExistingProject, forbidGitWrites, assertNoGitWrites };
+module.exports = { firstVersion, approve, awaitApproval, resultOption, openSetup, addConnection, chooseProviderCard, keyWindow, enterCredential, assertNoKeyFields, enableSharing, skipIntroduction, toOnboarding, menuClick, taskOptions, closeTaskOptions, selectMode, previewOptions, projectOptions, isolateDocuments, chooseLocation, openExistingProject, forbidGitWrites, assertNoGitWrites };

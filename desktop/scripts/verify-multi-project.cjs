@@ -76,7 +76,7 @@ const helpers = require('./ui-test-helpers.cjs');
     if (await page.locator('#data-dialog').evaluate(element => element.open)) await page.click('#accept-send');
   };
   const allow = async () => {
-    const once = page.locator('#approvals button').filter({ hasText: /^Kun denne fil$|^Tillad én gang$|^Tillad denne gang$/ });
+    const once = page.locator('#approvals button').filter({ hasText: /^Tillad én gang$/ });
     await once.first().waitFor(); await once.first().click();
   };
   try {

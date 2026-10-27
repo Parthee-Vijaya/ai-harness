@@ -83,7 +83,8 @@ const { run } = require('../core/git.cjs');
   assert.doesNotMatch(await page.inputValue('#prompt'),/React og TypeScript/);
   const brief=(await page.evaluate(()=>window.harness.connectionState())).value.brief.items.map(item=>`${item.label}: ${item.value}`).join('\n');
   assert.match(brief,/Brugerflade: React og TypeScript/); assert.match(brief,/Designværktøjer: Tailwind CSS med shadcn/); assert.match(brief,/Backend: Serverless-funktioner/);
-  assert.equal(await page.inputValue('#work-mode'),'chat');
+  // Et nyt projekts første idé står som en redigerbar kladde i Byg; se DESIGN.md.
+  assert.equal(await page.inputValue('#work-mode'),'free');
   await require('./ui-test-helpers.cjs').selectMode(page, 'plan');
   assert.equal(requests.length,0);
   const idea='En oversigt over tre fiktive mødelokaler, hvor jeg kan finde plads til et møde.';await page.fill('#prompt',idea);
@@ -132,13 +133,13 @@ const { run } = require('../core/git.cjs');
   await page.screenshot({path:path.join(root,'plan.png'),animations:'disabled'});
   await page.click('#build-plan');
   // Samme modtager og vilkår som ved planen: resuméet vises ikke igen ved bygning.
-  await page.locator('#approvals button').filter({hasText:'Tillad for denne opgave'}).waitFor({timeout:60000});
+  await require('./ui-test-helpers.cjs').awaitApproval(page, { timeout: 60000 });
   assert.equal(await page.locator('#data-dialog').evaluate(el=>el.open),false);
   assert.equal(await fs.readFile(path.join(project,'public/index.html'),'utf8'),'<h1>Før chatten</h1>');
   console.log('Forbindelse og datagennemgang bestået');
   assert.match(await page.locator('#agent-activity').textContent(),/Venter på dig: Må AI’en ændre filer i projektet\?/);
   assert.equal(await page.locator('#approvals .action-target').textContent(),'public/index.html');
-  await page.locator('#approvals button').filter({hasText:'Tillad for denne opgave'}).click();
+  await require('./ui-test-helpers.cjs').approve(page, 'Tillad for denne opgave');
   await page.frameLocator('#preview').locator('h1').filter({hasText:'Bygget fra desktopchatten'}).waitFor({timeout:30000});
   await page.locator('#run-status').filter({hasText:'Klar'}).waitFor({timeout:30000});
   if (process.env.HARNESS_TEST_PACKAGE) {
@@ -151,13 +152,14 @@ const { run } = require('../core/git.cjs');
     await page.click('#tab-preview');
   }
   assert.equal((await run(project,['rev-list','--count','HEAD'])).toString().trim(),'2');
-  assert.match(await page.locator('#run-review').textContent(),/AI’en kørte ingen kommandoer, så ingen tests er kørt/);
-  await page.locator('#run-review .check-ok').filter({hasText:'Forhåndsvisning: siden blev vist uden fejl i konsollen.'}).waitFor({timeout:30000});
+  // Resultatkortet viser en kort kvittering; kommandoer og kontrolresultater står i Aktivitet, ikke på kortet (DESIGN.md).
+  assert.match(await page.locator('#run-review').textContent(),/1 fil ændret/);
+  assert.match(await page.locator('#run-review').textContent(),/Se ændringer/);
   assert.match((await run(project,['show','HEAD:public/index.html'])).toString(),/Bygget fra desktopchatten/);
   assert.equal((await run(project,['status','--porcelain'])).toString(),'');
   // Med automatiske versioner tilbyder kortet at fortryde opgaven; ellers at gemme den.
   if (process.env.HARNESS_TEST_PACKAGE) await page.locator('#run-review button').filter({hasText:'Gem version'}).click();
-  else { await page.locator('#run-review button').filter({hasText:'Fortryd opgaven'}).waitFor(); assert.match((await run(project,['log','-1','--format=%s'])).toString().trim(),/^AI-opgave: Byg første udkast efter den plan, jeg har gennemgået\. Afslut med konkrete ting …$/); await require('./ui-test-helpers.cjs').menuClick(page, '#git-button'); }
+  else { await require('./ui-test-helpers.cjs').resultOption(page, 'Fortryd opgaven'); assert.match((await run(project,['log','-1','--format=%s'])).toString().trim(),/^AI-opgave: Byg første udkast efter den plan, jeg har gennemgået\. Afslut med konkrete ting …$/); await require('./ui-test-helpers.cjs').menuClick(page, '#git-button'); }
   await page.waitForFunction(()=>document.querySelectorAll('#git-history li').length===2 && !document.querySelector('#git-auto').disabled); assert.equal(await page.isChecked('#git-auto'),!process.env.HARNESS_TEST_PACKAGE);
   assert.equal(await page.locator('#message.error:visible').count(),0);
   await page.screenshot({path:path.join(root,'versioner.png'),fullPage:true}); await page.click('#tab-preview');

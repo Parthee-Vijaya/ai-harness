@@ -1170,9 +1170,10 @@ $('#start-idea').onclick = () => {
   if ($('#prompt').value.trim()) { message('Din kladde er bevaret. Send eller ryd den, før du forbereder en ny besked.'); $('#prompt').focus(); return; }
   const wishes = [['idea-platform', 'Platform'], ['idea-data', 'Data'], ['idea-ui', 'Brugerflade'], ['idea-design', 'Designværktøjer'], ['idea-backend', 'Backend']]
     .filter(([id]) => $(`#${id}`).value).map(([id, label]) => ({ label, value: $(`#${id}`).value }));
-  // Projektidéen er en byggeopgave. Et arbejdsmådevalg eller en gemt kladde
-  // har dog forrang; Planlæg vælges kun af brugeren.
-  if (!view.modeChosen && !view.draft) $('#work-mode').value = 'free';
+  // Projektidéen er en byggeopgave. Et arbejdsmådevalg eller en gemt kladde med tekst har dog forrang; Planlæg vælges
+  // kun af brugeren. En tom kladde tæller ikke med: ellers afgjorde det tilfældige tidspunkt for kladdegemningen,
+  // om idéen landede i Byg eller i Samtale.
+  if (!view.modeChosen && !view.draft?.text?.trim()) $('#work-mode').value = 'free';
   updateWorkMode();
   // Med planlægning kommer ønskerne i projektbriefen, som følger med hver besked. Uden står de i beskeden som før.
   const inBrief = featureOn('planlaegning') && wishes.length;

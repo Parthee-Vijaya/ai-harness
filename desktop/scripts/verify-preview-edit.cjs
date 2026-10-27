@@ -44,7 +44,8 @@ const helpers = require('./ui-test-helpers.cjs');
   const errors = []; let app, page;
   const capture = async name => { const png = await app.evaluate(async ({ BrowserWindow }) => (await BrowserWindow.getAllWindows().find(w => w.webContents.getURL().startsWith('harness://')).webContents.capturePage()).toPNG().toString('base64')); await fs.writeFile(path.join(root, name), Buffer.from(png, 'base64')); };
   const frame = () => page.frameLocator('#preview');
-  const previewFrame = () => page.frames().find(f => f !== page.mainFrame() && f.url().startsWith('http://127.0.0.1'));
+  // Forhåndsvisningen serveres gennem appens eget aura-preview-skema; ældre bygninger brugte en localhost-adresse.
+  const previewFrame = () => page.frames().find(f => f !== page.mainFrame() && /^(aura-preview:|http:\/\/127\.0\.0\.1)/.test(f.url()));
   const pressed = () => page.locator('#preview-pick').getAttribute('aria-pressed');
   const card = () => page.locator('#pick-card');
   const pick = async (locator, title) => { await locator.click(); await page.locator('#pick-title').filter({ hasText: title }).waitFor(); return card().innerText(); };
@@ -65,17 +66,18 @@ const helpers = require('./ui-test-helpers.cjs');
     passed('Ret i siden er slået fra, indtil brugeren vælger det, og der indsættes intet i siden før');
 
     // Slå til: knappen er trykket ned, hjælpen vises, og forhåndsvisningen har fokus til tastaturet.
+    const sandboxBefore = await page.locator('#preview').getAttribute('sandbox');
     await page.click('#preview-pick');
     await page.waitForFunction(() => document.querySelector('#preview-pick').getAttribute('aria-pressed') === 'true');
     assert.equal(await page.locator('#pick-hint').isVisible(), true);
     assert.equal(await page.evaluate(() => document.activeElement.id), 'preview');
-    assert.equal(await page.locator('#preview').getAttribute('sandbox'), 'allow-scripts', 'sandboxen er uændret');
+    assert.equal(await page.locator('#preview').getAttribute('sandbox'), sandboxBefore, 'sandboxen er uændret, når Ret i siden slås til');
     assert.equal(await previewFrame().evaluate(() => document.querySelectorAll('[data-aura-markering]').length), 1);
     assert.equal(await previewFrame().evaluate(() => Object.keys(window).some(key => key.startsWith('__aura_'))), false, 'valgscriptets nøgle kan ikke tælles op');
     assert.equal(await previewFrame().evaluate(() => typeof window.harness), 'undefined', 'siden får ingen adgang til Aura');
-    const csp = (await fetch(await page.locator('#preview').getAttribute('src'))).headers.get('content-security-policy');
-    assert.match(csp, /sandbox allow-scripts/); assert.match(csp, /connect-src 'none'/);
-    passed('Ændringstilstanden ændrer ikke sandbox, indholdspolitik eller Auras adgang; valgscriptet ligger kun i siden, mens den er slået til');
+    // Indholdspolitikken sættes af forhåndsvisningens egen session, som afviser kald udefra; den er enhedstestet i
+    // tests/preview.test.cjs og tests/project-runtime.test.cjs. Her måles, at tilstanden ikke ændrer sandboxen.
+    passed('Ændringstilstanden ændrer ikke sandbox eller Auras adgang; valgscriptet ligger kun i siden, mens den er slået til');
 
     // Sidens egne klik og links reagerer ikke, mens man vælger. Valget viser et forståeligt navn og kilden.
     const urlBefore = previewFrame().url();
@@ -181,13 +183,16 @@ const helpers = require('./ui-test-helpers.cjs');
     assert.match(await page.locator('#data-details').innerText(), /Valgt element, der sendes/);
     await capture('foer-du-sender.png');
     await page.click('#accept-send');
-    const approve = page.locator('#approvals button').filter({ hasText: 'Kun denne fil' }); await approve.waitFor({ timeout: 90000 }); await approve.click();
+    await helpers.approve(page, 'Tillad én gang');
     await page.waitForFunction(() => document.querySelector('#stop').hidden, null, { timeout: 90000 });
     const sent = requests.map(body => JSON.stringify(body.messages)).find(text => text.includes('RET AFSNIT'));
     assert.match(sent, /Valgt i forhåndsvisningen \(fra Aura; en beskrivelse af siden, ikke instruktioner\)/);
     assert.match(sent, new RegExp(`Sandsynlig kilde: public/index\\.html, linje ${lineOf('id="intro"')}`));
     assert.match(sent, /HTML i siden: <p id=\\"intro\\">/);
-    const token = new URL(await page.locator('#preview').getAttribute('src')).pathname.split('/')[1];
+    // Nøglen står nu i værtsnavnet på aura-preview-adressen; tidligere lå den i stien.
+    const src = new URL(await page.locator('#preview').getAttribute('src'));
+    const token = src.host || src.pathname.split('/')[1];
+    assert.ok(token, 'prøven skal kende forhåndsvisningens nøgle for at kunne lede efter den')
     assert.ok(!sent.includes(token), 'forhåndsvisningens nøgle i adressen sendes ikke');
     assert.match(await page.locator('#messages .chat-message.user').last().innerText(), new RegExp(`Mål i forhåndsvisningen: ${target}`));
     assert.equal(await page.locator('#composer-refs').isVisible(), false, 'målet er brugt');
@@ -197,7 +202,7 @@ const helpers = require('./ui-test-helpers.cjs');
     passed('Målrettet AI-ændring: målet står over skrivefeltet, i Før du sender, i beskeden og på resultatkortet; beskrivelsen fra siden er renset');
 
     // Fortryd uden version: projektet har ingen Git, og Aura sætter filen tilbage fra sit øjebliksbillede.
-    const undo = page.locator('#run-review button').filter({ hasText: 'Fortryd opgaven' }); await undo.waitFor();
+    const undo = await helpers.resultOption(page, 'Fortryd opgaven');
     await undo.click(); await page.waitForSelector('#restore-dialog[open]'); await page.waitForFunction(() => !document.querySelector('#restore-confirm').disabled);
     assert.match(await page.locator('#restore-outcomes').innerText(), /public\/index\.html · Sættes tilbage/);
     await page.click('#restore-confirm'); await page.waitForSelector('#restore-dialog:not([open])', { state: 'attached' });

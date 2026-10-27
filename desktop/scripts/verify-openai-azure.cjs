@@ -94,7 +94,7 @@ const helpers = require('./ui-test-helpers.cjs');
       }
       await send();
       await page.waitForSelector('#approvals .approval', { timeout: 60000 });
-      await page.locator('#approvals button').filter({ hasText: 'Tillad for denne opgave' }).click();
+      await helpers.approve(page, 'Tillad for denne opgave');
       await page.waitForFunction(() => document.querySelector('#stop').hidden, null, { timeout: 60000 });
       assert.match(await fs.readFile(file, 'utf8'), new RegExp(`Bygget via ${kind}`));
       await page.frameLocator('#preview').locator('h1').filter({ hasText: `Bygget via ${kind}` }).waitFor();
