@@ -37,7 +37,7 @@ function validateSkillText(name, content, where = `Skill ${name}`) {
 }
 
 // Brug samme kontrol ved kildeindlæsning, tilpasning og før en modelsession.
-function validateSkillFiles(name, files, where = `Skill ${name}`) {
+function validateSkillFiles(name, files, where = `Skill ${name}`, { unusedReferences = false } = {}) {
   const main = files.find(file => file.path === 'SKILL.md');
   if (!main) throw new Error(`${where}: SKILL.md mangler.`);
   const result = validateSkillText(name, main.content, where);
@@ -45,7 +45,7 @@ function validateSkillFiles(name, files, where = `Skill ${name}`) {
   for (const file of files) {
     if (!SKILL_FILE.test(file.path) || typeof file.content !== 'string' || paths.has(file.path)) throw new Error(`${where}: Ugyldig eller gentaget referencefil ${file.path}.`);
     paths.add(file.path);
-    if (file.path !== 'SKILL.md' && !result.body.includes(file.path)) throw new Error(`${where}: ${file.path} bruges ikke fra SKILL.md. Bevar henvisningen, eller gendan skillen.`);
+    if (file.path !== 'SKILL.md' && !unusedReferences && !result.body.includes(file.path)) throw new Error(`${where}: ${file.path} bruges ikke fra SKILL.md. Bevar henvisningen, eller gendan skillen.`);
   }
   for (const raw of result.body.match(/references\/[^\s)\]\x60"<>]+/g) || []) {
     const reference = raw.replace(/[.,;:]+$/, '');

@@ -54,15 +54,15 @@ Kilder: [React om at oprette en ny app](https://react.dev/learn/creating-a-react
 
 `harness-design-og-tilgaengelighed` · [SKILL.md](skills/harness-design-og-tilgaengelighed/SKILL.md)
 
-**Hvad gør den?** Hjælper med et sammenhængende design ud fra kommunens designsystem eller dine referencer og kontrollerer tilgængelighed: tastatur, fokus, kontrast, fejlbeskeder, overskrifter og små skærme. Den bygger efter WCAG på niveau AA og minder om tilgængelighedserklæringen, som offentlige websteder og apps skal have.
+**Hvad gør den?** Hjælper med et sammenhængende design ud fra kommunens designsystem eller dine referencer: et kort designbrief i docs/design.md, én designretning, farvetokens med lyst og mørkt tema, typografi og alle tilstande i brugerforløbet. Den kontrollerer tilgængelighed: tastatur, fokus, kontrast, fejlbeskeder, overskrifter og små skærme. Den bygger efter WCAG på niveau AA og minder om tilgængelighedserklæringen, som offentlige websteder og apps skal have.
 
 **Hvornår bruges den?** Når en side, formular eller komponent bygges eller ændres, og før en offentlig side udgives.
 
-**Hvad får du?** En brugerflade, der er set i browseren på computer- og mobilbredde, og en liste over, hvad der er kontrolleret, og hvad der mangler.
+**Hvad får du?** Et første udkast med designbrief, farvetokens og tilstande, og en liste over, hvad der er set, prøvet med tastatur og kontrolleret, og hvad der mangler.
 
-**Hvad gør den ikke?** Den erklærer ikke løsningen tilgængelig. Et automatisk værktøj kan ikke alene afgøre, om en side er tilgængelig.
+**Hvad gør den ikke?** Den erklærer ikke løsningen tilgængelig. Et automatisk værktøj kan ikke alene afgøre, om en side er tilgængelig. Design er ikke obligatorisk; i Aura kan funktionen Design slås fra.
 
-Kilder: [Lov om tilgængelighed af offentlige organers websteder og mobilapplikationer](https://www.retsinformation.dk/eli/lta/2018/692), [Digitaliseringsstyrelsen om tilgængelighedserklæringen](https://digst.dk/digital-inklusion/webtilgaengelighed/om-tilgaengelighedserklaeringen/), [W3C om evaluering af tilgængelighed](https://www.w3.org/WAI/test-evaluate/), [WCAG 2.2](https://www.w3.org/TR/WCAG22/)
+Kilder: [Lov om tilgængelighed af offentlige organers websteder og mobilapplikationer](https://www.retsinformation.dk/eli/lta/2018/692), [Digitaliseringsstyrelsen om tilgængelighedserklæringen](https://digst.dk/digital-inklusion/webtilgaengelighed/om-tilgaengelighedserklaeringen/), [W3C om evaluering af tilgængelighed](https://www.w3.org/WAI/test-evaluate/), [WCAG 2.2](https://www.w3.org/TR/WCAG22/), [Det Fælles Designsystem](https://designsystem.dk/), [Aura Design af Parthee Vijayamohan, bidrag #23 til Aura Harness](https://github.com/ai-alliancen-org/ai-harness/pull/23)
 
 ## Kode og kvalitet
 

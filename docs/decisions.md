@@ -714,9 +714,11 @@ Design og udseende:
 - **Udbyderlogoer** må stå ved modellen under skrivefeltet og på modelkortene. Alle bruger det fælles logosæt `desktop/ui/provider-*.svg` med samme størrelse og farveholdning. Ved OpenRouter vises forbindelsens logo.
 - **Tema følger systemet** med et valg under Indstillinger. Lyst og mørkt bygger på ét sæt farvetokens, og de mørke værdier skrives ind i `desktop/DESIGN.md`.
 - **Arbejdsstatus** vises som lyskant om skrivefeltet og som et lille mærke på forhåndsvisningen i Byg. Statusteksten står og læses op ét sted.
+- **Designbriefet** skrives af designskillen i `docs/design.md` i brugerens projekt og genbruges. I Planlæg står et kort resumé under Sådan skal det se ud. Besluttet 26. oktober 2026.
 
 Nøgler, godkendelser og pakning:
 - **Nøgler og GitHub-token indtastes kun i et separat vindue.** Hovedvinduet får en engangskvittering. Udgivs felt flyttes med. Nøglen renses og kontrolleres, før den gemmes. Knappen hedder Indtast nøgle.
+- **En afvist nøgle gemmes ikke.** Afviser udbyderen nøglen, bliver vinduet åbent med nøglen maskeret og udbyderens svar bag Se detaljer. Kan serveren ikke nås, fx en lokal server, der ikke kører, kan man vælge Gem alligevel. Besluttet 26. oktober 2026.
 - **Godkend alt er et udtrykkeligt valg pr. samtale**, som også gælder over projektmappens grænse. Det får dansk navn og advarsel og bygges på den nye godkendelsesmodel, når kommandosandkassen er rettet. #45 flettes ikke i sin nuværende form.
 - **Pakning sker fra et committet kildetræ.** Pakken får et kildebevis med commit og kontrolsummer, som også dækker byggekonfiguration, entitlements og byggescripts. Signeringskvitteringen gemmes pr. bygning. `docs/udgivelse.md` får den nye rækkefølge.
 - **PDF-udtræk** må bruge `pdfjs-dist` (Apache-2.0). `@napi-rs/canvas` kommer kun med, hvis udtrækket påviseligt ikke virker uden.
@@ -730,3 +732,4 @@ Valg i implementeringen, som kan ændres:
 - Den engangsvise nulstilling af AI-sessioner samles i én udgivelse og nævnes i udgivelsesnoterne.
 - Dependabot #11 (OpenCode 1.19.3) venter på motorarbejdet, og roden og `desktop/runtime-lock.json` løftes sammen.
 - Temaet (#46) sættes i Electrons `nativeTheme`. Vinduesramme, felter, menuer og udbyderlogoer følger derfor med, og forhåndsvisningen og skærmbilleder af projektets side bruger samme valg, når siden har et lyst og et mørkt udseende. Valget ligger under Indstillinger › Udseende og i ⌘K. #46's smalle layout ned til 320 px tages ikke med, fordi appvinduet er mindst 980 px bredt.
+- #23 er foldet ind i `harness-design-og-tilgaengelighed` som to nye referencer, `designmetode.md` og `moenstre-og-tilstande.md`, med kilden nævnt i kataloget. Kataloget med 43 stilretninger fra SkillsUI, kodeskabelonerne, tokengeneratoren i Python og Atlas' rolletabel og panelmønstre er ikke med: rettighederne er ikke afklaret, eller materialet hører til startskabelonerne i M3 og de senere stilskills. Skillens beskrivelse er uændret, så M2 kan skrive den endelige. En tilpasset SKILL.md fra før en ny referencefil stopper ikke længere afsendelsen; motoren lister alle referencer. Pakkerne er bygget om under 0.2.1, fordi installationer sammenligner filernes indhold.

@@ -41,7 +41,9 @@ class Skills {
     const library = await this.library(), list = await this.list(projectRoot), features = (await this.features.get(projectRoot)).effective;
     const enabled = list.filter(skill => skill.id !== RULES && skill.enabled);
     const skills = enabled.map(skill => ({ name: skill.id, files: [{ path: 'SKILL.md', content: skill.content }, ...library.skills.find(item => item.name === skill.id).files.filter(file => file.path !== 'SKILL.md')] }));
-    for (const skill of skills) validateSkillFiles(skill.name, skill.files);
+    // En tilpasning fra før en referencefil kom til, nævner den ikke. Motoren lister alle skillens referencer, så
+    // tilpasningen må stå, som den er; en henvisning til en reference, der ikke findes, afvises stadig.
+    skills.forEach((skill, index) => validateSkillFiles(skill.name, skill.files, undefined, { unusedReferences: enabled[index].customized }));
     validateSkillLinks(skills, new Set(library.skills.map(skill => skill.name)));
     const integrations = library.features.filter(feature => feature.group === 'integrationer' && features[feature.id]).map(feature => feature.title);
     return { rules: list.find(skill => skill.id === RULES).content, skills, titles: enabled.map(skill => skill.title), features, integrations };

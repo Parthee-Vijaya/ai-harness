@@ -1,6 +1,6 @@
 # Tjekliste til tilgængelighed
 
-Et udvalg af de vigtigste kontroller efter WCAG på niveau AA til små webapps. Skriv for hvert punkt: i orden, fund eller ikke relevant.
+Et udvalg af de vigtigste kontroller efter WCAG på niveau AA til små webapps. Skriv for hvert punkt: i orden, fund, ikke afprøvet eller ikke relevant.
 
 ## Tastatur og fokus
 
@@ -29,6 +29,7 @@ Et udvalg af de vigtigste kontroller efter WCAG på niveau AA til små webapps. 
 - [ ] Almindelig tekst har en kontrast på mindst 4,5:1 og stor tekst mindst 3:1.
 - [ ] Knapper, felter og fokusmarkeringer har en kontrast på mindst 3:1 mod omgivelserne.
 - [ ] Information bæres ikke af farve alene.
+- [ ] Har siden et lyst og et mørkt tema, er kontrasten kontrolleret i begge.
 - [ ] Siden kan forstørres til 200 procent, og indholdet fungerer ved 320 CSS-pixels bredde uden vandret rulning.
 - [ ] Bevægelse og animation kan undgås, og intet blinker mere end tre gange i sekundet.
 
@@ -42,7 +43,7 @@ Et udvalg af de vigtigste kontroller efter WCAG på niveau AA til små webapps. 
 
 - [ ] Automatisk kontrol med fx axe eller Lighthouse er kørt, og fundene er vurderet.
 - [ ] Hele brugerforløbet er gennemført med tastatur alene.
-- [ ] En skærmlæser er brugt på de vigtigste sider, fx VoiceOver på Mac eller NVDA på Windows.
+- [ ] En skærmlæser er brugt på de vigtigste sider, fx VoiceOver på Mac eller NVDA på Windows. Kan du ikke bruge en skærmlæser, så står det som ikke afprøvet.
 - [ ] Siden er set på en smal mobilbredde.
 
 ## Offentlige websteder

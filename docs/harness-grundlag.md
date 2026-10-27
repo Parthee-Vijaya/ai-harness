@@ -91,7 +91,7 @@ Navnene nedenfor beskriver fagområder, ikke færdige eksportpakker. Hver skill 
 3. **Arkitektur og teknologi:** Ved nye væsentlige valg. Giv én begrundet anbefaling, relevante alternativer og driftskonsekvenser.
 4. **Data og leverandører:** Ved nye dataforløb eller tjenester. Giv en opdateret oversigt, kilder og spørgsmål til ansvarlige.
 5. **Nøgler og afhængigheder:** Ved integrationer og pakkeændringer. Kontrollér hemmeligheder, nødvendighed, versioner og låsefiler uden at gengive nøgler.
-6. **Design og tilgængelighed:** Ved brugerfladeopgaver. Anvend godkendte referencer og afprøv det synlige resultat.
+6. **Design og tilgængelighed:** Ved brugerfladeopgaver. Anvend godkendte referencer, skriv et kort designbrief i `docs/design.md`, læg farvetokens med lyst og mørkt tema, og afprøv det synlige resultat.
 7. **Kodestil og vedligeholdelse:** Ved implementering og review. Kontrollér konventioner, kompleksitet og forståelighed.
 8. **Afprøvning og fejlretning:** Ved ændringer. Giv reproduktion, relevante kontroller og faktisk evidens.
 9. **Git og samarbejde:** Ved milepæle. Gennemgå de berørte ændringer og følg projektets valgte tilladelser og proces.

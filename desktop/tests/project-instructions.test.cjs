@@ -65,6 +65,28 @@ test('tilpassede skills kontrollerer referencer og andre skills før lagring og 
   assert.equal((await skills.context('/projekt')).skills[0].files[0].content, original);
 });
 
+test('en tilpasning fra før en ny referencefil stopper ikke afsendelsen, og den nye reference følger med', async t => {
+  const { Skills } = require('../core/skills.cjs'), { Store } = require('../core/store.cjs');
+  const store = new Store(await temp(t), {}), name = 'harness-proeve';
+  const original = '---\nname: harness-proeve\ndescription: Brug den ved prøven.\n---\nLæs references/detaljer.md.\n';
+  const files = [{ path: 'SKILL.md', content: original }, { path: 'references/detaljer.md', content: 'Detaljer' }];
+  const library = async () => ({ rules: 'Regler', features: [{ id: 'proeve', skills: [name] }], skills: [{ name, title: 'Prøve', summary: 'Prøve', files }] });
+  const skills = new Skills(library, store, { get: async () => ({ effective: { proeve: true } }) });
+  await skills.save('/projekt', { id: name, content: original + 'Min egen tilpasning.' });
+  // Biblioteket får en ny reference, som tilpasningen ikke kender.
+  files[0] = { path: 'SKILL.md', content: original + 'Læs også references/ny.md.\n' }; files.push({ path: 'references/ny.md', content: 'Ny metode' });
+  const context = await skills.context('/projekt');
+  assert.match(context.skills[0].files[0].content, /Min egen tilpasning/);
+  assert.deepEqual(context.skills[0].files.map(file => file.path), ['SKILL.md', 'references/detaljer.md', 'references/ny.md']);
+  // Uden tilpasning gælder kravet stadig, og en henvisning til en reference, der ikke findes, afvises.
+  await assert.rejects(skills.save('/projekt', { id: name, content: original + 'Ny tekst.' }), /references\/ny\.md bruges ikke/);
+  await store.saveProject('/projekt', { skills: { [name]: { content: original + 'Læs references/findes-ikke.md.' } } });
+  await assert.rejects(skills.context('/projekt'), /findes ikke/);
+  files[0] = { path: 'SKILL.md', content: original };
+  await store.saveProject('/projekt', { skills: {} });
+  await assert.rejects(skills.context('/projekt'), /references\/ny\.md bruges ikke/);
+});
+
 test('projektregler kontrolleres igen efter motoropstart, før modellen modtager en opgave', async t => {
   const root = await temp(t); let sends = 0;
   const bench = new Workbench({ directory: await temp(t), profiles, emit: () => {}, safeStorage: {}, engineFactory: () => ({ active: false, start: async () => fs.writeFile(path.join(root, 'AGENTS.md'), 'Ændret under opstart'), send: async () => sends++, abort: async () => {}, close: async () => {} }) });

@@ -368,10 +368,10 @@
       "title": "Design og tilgængelighed",
       "summary": "Bygger brugerfladen efter godkendte designreferencer og afprøver tilgængelighed med både værktøjer og hænder.",
       "faq": {
-        "hvad": "Hjælper med et sammenhængende design ud fra kommunens designsystem eller dine referencer og kontrollerer tilgængelighed: tastatur, fokus, kontrast, fejlbeskeder, overskrifter og små skærme. Den bygger efter WCAG på niveau AA og minder om tilgængelighedserklæringen, som offentlige websteder og apps skal have.",
+        "hvad": "Hjælper med et sammenhængende design ud fra kommunens designsystem eller dine referencer: et kort designbrief i docs/design.md, én designretning, farvetokens med lyst og mørkt tema, typografi og alle tilstande i brugerforløbet. Den kontrollerer tilgængelighed: tastatur, fokus, kontrast, fejlbeskeder, overskrifter og små skærme. Den bygger efter WCAG på niveau AA og minder om tilgængelighedserklæringen, som offentlige websteder og apps skal have.",
         "hvornaar": "Når en side, formular eller komponent bygges eller ændres, og før en offentlig side udgives.",
-        "resultat": "En brugerflade, der er set i browseren på computer- og mobilbredde, og en liste over, hvad der er kontrolleret, og hvad der mangler.",
-        "ikke": "Den erklærer ikke løsningen tilgængelig. Et automatisk værktøj kan ikke alene afgøre, om en side er tilgængelig."
+        "resultat": "Et første udkast med designbrief, farvetokens og tilstande, og en liste over, hvad der er set, prøvet med tastatur og kontrolleret, og hvad der mangler.",
+        "ikke": "Den erklærer ikke løsningen tilgængelig. Et automatisk værktøj kan ikke alene afgøre, om en side er tilgængelig. Design er ikke obligatorisk; i Aura kan funktionen Design slås fra."
       },
       "sources": [
         {
@@ -389,6 +389,14 @@
         {
           "title": "WCAG 2.2",
           "url": "https://www.w3.org/TR/WCAG22/"
+        },
+        {
+          "title": "Det Fælles Designsystem",
+          "url": "https://designsystem.dk/"
+        },
+        {
+          "title": "Aura Design af Parthee Vijayamohan, bidrag #23 til Aura Harness",
+          "url": "https://github.com/ai-alliancen-org/ai-harness/pull/23"
         }
       ]
     },
