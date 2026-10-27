@@ -14,6 +14,15 @@
   const key = value => JSON.stringify([value?.root, value?.chat]);
   const same = value => owner === value && key(read()) === value.key;
   const handle = () => state && { scope: state.scope, revision: state.revision };
+  // Et billede vises, som det sendes: omskrevet til PNG uden EXIF. Teksten vises ordret.
+  function content(file) {
+    if (file.kind !== 'image') return el('pre', file.text);
+    const block = el('div');
+    if (!/^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/.test(file.dataURL || '')) { block.textContent = 'Billedet kunne ikke vises. Gennemgå filvalget igen.'; return block; }
+    const image = el('img'); image.src = file.dataURL; image.alt = file.name; image.className = 'material-image';
+    block.append(image, el('p', `Sendes som PNG uden EXIF · ${file.width} × ${file.height} pixels`));
+    return block;
+  }
   function button(text, onClick, primary = false) { const n = el('button', text); n.type = 'button'; if (primary) n.className = 'primary'; n.onclick = onClick; return n; }
   function controls() {
     const running = read().running, disabled = !owner || !state || busy || running;
@@ -100,7 +109,7 @@
     base('Dette indhold kan medsendes', 'Indholdet medsendes først efter den almindelige gennemgang af modtager og data. Kildemappen bliver ikke et arbejdsområde for AI’en.');
     for (const file of next.files) {
       const section = el('section');
-      section.append(el('h3', [file.folder, file.name].filter(Boolean).join('/')), el('small', `${file.bytes.toLocaleString('da-DK')} bytes · SHA-256 ${file.sha256}`), el('pre', file.text));
+      section.append(el('h3', [file.folder, file.name].filter(Boolean).join('/')), el('small', `${file.bytes.toLocaleString('da-DK')} bytes · SHA-256 ${file.sha256}`), content(file));
       dialog.append(section);
     }
     const add = button('Tilføj de gennemgåede filer', () => {
@@ -134,7 +143,7 @@
   dialog.addEventListener('cancel', event => { event.preventDefault(); if (!busy) close(); });
   window.harness.onEvent(event => { if (event.type === 'chat-materials.changed' && event.chat === owner?.chat && !busy) void refresh(); });
   // Den præcise tekst i Før du sender. Det er den samme tekst, der sendes.
-  const disclose = materials => {
+  const disclose = (materials, notice = '') => {
     const target = document.getElementById('data-materials');
     target.replaceChildren();
     target.hidden = !materials;
@@ -143,17 +152,18 @@
     heading.textContent = 'Vedhæftninger · det præcise indhold';
     target.append(heading);
     for (const file of materials.files) {
-      const name = document.createElement('p'), text = document.createElement('pre');
+      const name = document.createElement('p');
+      const text = content(file);
       name.textContent = [file.folder, file.name].filter(Boolean).join('/');
-      text.textContent = file.text;
       // Almindelige navne og den præcise tekst i første lag; kontrolsum, revision og bytes bag Se detaljer.
       const fold = document.createElement('details'), summary = document.createElement('summary'), facts = document.createElement('p');
       summary.textContent = 'Se detaljer';
       facts.className = 'hint';
-      facts.textContent = `${file.bytes.toLocaleString('da-DK')} bytes · revision ${materials.revision} · SHA-256 ${file.sha256}`;
+      facts.textContent = `${file.bytes.toLocaleString('da-DK')} bytes · revision ${materials.revision} · SHA-256 ${file.sha256}` + (file.normalizedHash ? ` · sendt billede ${file.normalizedBytes.toLocaleString('da-DK')} bytes, SHA-256 ${file.normalizedHash}` : '');
       fold.append(summary, facts);
       target.append(name, text, fold);
     }
+    if (notice) { const warning = document.createElement('p'); warning.className = 'materials-notice'; warning.textContent = notice; target.append(warning); }
     const note = document.createElement('p');
     note.className = 'hint';
     note.textContent = materials.notice;

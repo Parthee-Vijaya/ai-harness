@@ -48,7 +48,7 @@ test('beskyttede, skjulte, genererede og binære filer kan ikke vedhæftes', asy
     [await f.write('node_modules/pakke/readme.md', 'genereret'), /Beskyttede, skjulte og genererede/],
     [await f.write('produktion.env', 'TOKEN=123'), /Beskyttede, skjulte og genererede/],
     [await f.write('secrets/noter.md', 'hemmelig'), /Beskyttede, skjulte og genererede/],
-    [await f.write('billede.bin', 'x'), /tekst- eller kodefil/],
+    [await f.write('billede.bin', 'x'), /Vælg tekst eller kode/],
     [path.join(f.root, 'findes-ikke.md'), /ENOENT|no such file/]
   ];
   for (const [file, pattern] of cases) await assert.rejects(f.materials.offerFiles(f.chat, [file]), pattern);

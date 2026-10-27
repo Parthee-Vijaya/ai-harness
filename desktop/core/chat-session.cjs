@@ -281,6 +281,8 @@ class ChatSession {
     // Udbyderens egne oplysninger om værktøjs- og billedstøtte. Står efter fingeraftrykket, så et nyt
     // katalogtidspunkt ikke får resuméet til at dukke op igen.
     disclosure.modelSupport = require('./model-support.cjs').catalogSupport(selection.model, selection.route, bench.catalogTimes?.get(selection.connection.id) || null);
+    // Et billede sendes, selv om udbyderen ikke oplyser billedstøtte for modellen. Brugeren får det at vide først.
+    if (chatMaterials?.files.some(file => file.kind === 'image') && disclosure.modelSupport?.model?.images !== true) disclosure.imageNotice = 'Udbyderen oplyser ikke, at denne model kan læse billeder. Billedet sendes alligevel, og udbyderen kan afvise opgaven.';
     // Forhåndsvisningens størrelse til før/efter-billederne. Kun tal; siden findes i hovedprocessen.
     const view = input.view && Number.isFinite(input.view.width) && Number.isFinite(input.view.height) ? { width: Math.round(input.view.width), height: Math.round(input.view.height) } : null;
     if ((bench.connectionVersions.get(input.connectionID) || 0) !== connectionVersion) throw new Error('Forbindelsen blev ændret. Gennemgå oplysningerne igen.');
@@ -288,7 +290,10 @@ class ChatSession {
     const prepared = this.prepared;
     // Den tidligere samtale, der efter al sandsynlighed følger med. Den endelige værdi kendes først, når motoren er
     // startet; afviger den, afvises afsendelsen i stedet for at sende en anden tekst end den gennemgåede.
-    prepared.handoff = this.engineIdentity === disclosure.fingerprint && this.engine?.active ? this.engineConversation || '' : this.data.opencode?.fingerprint === disclosure.fingerprint ? this.data.opencode.conversation || '' : disclosure.conversation || '';
+    // Modelsessionen følger sessionsfingeraftrykket. En vedhæftning giver et nyt fingeraftryk til gennemgangen,
+    // men ikke en ny session, så forudsigelsen skal regne på det samme aftryk som genbruget af motoren.
+    const sessionPrint = disclosure.sessionFingerprint || disclosure.fingerprint;
+    prepared.handoff = this.engineIdentity === sessionPrint && this.engine?.active ? this.engineConversation || '' : this.data.opencode?.fingerprint === sessionPrint ? this.data.opencode.conversation || '' : disclosure.conversation || '';
     prepared.messageText = typeof input.text === 'string' ? input.text : null;
     // Projektet, som det står på disken nu. checkContext kontrollerer, at det er uændret ved afsendelsen.
     prepared.project = currentProject;
@@ -424,6 +429,7 @@ class ChatSession {
       if (this.commandSandbox) system += '\nAlle kommandoer kører med teknisk isolation. Du kan arbejde i arbejdsområdet og den midlertidige mappe. Hemmeligheder og øvrige mapper er spærret. Netadgang er afgrænset til registry.npmjs.org, pypi.org og files.pythonhosted.org. Forklar en afvist adgang; forsøg ikke at omgå den.';
       if (Object.hasOwn(prepared.context, 'projectInstructions') && JSON.stringify(await projectInstructions(this.root)) !== JSON.stringify(prepared.context.projectInstructions)) throw new Error('Projektets AGENTS.md har ændret sig under opstart. Gennemgå oplysningerne igen før afsendelse.');
       this.gateway?.setEffort?.(prepared.disclosure.effort);
+      this.gateway?.setImages?.([]);
       // Brugeren har valgt at gøre en lang samtale kortere, før beskeden sendes igen.
       if (input.compact === true && (await this.engine.messages().catch(() => [])).length) {
         this.compacting = true;
@@ -434,6 +440,7 @@ class ChatSession {
       // Sidste kontrol, lige før beskeden sendes: grundlaget skal stadig stå uændret.
       if (prepared.guard) await this.checkContext(prepared, runPlan);
       await bench.chatMaterials?.assertPrepared(this, prepared.chatMaterials);
+      this.gateway?.setImages?.(prepared.chatMaterials?.files.filter(file => file.kind === 'image') || []);
       checkStopped(); await this.engine.send(text, system); checkStopped();
       // Valget gælder én besked og ryddes, når beskeden er sendt.
       if (prepared.chatMaterials) bench.chatMaterials?.clear(this);

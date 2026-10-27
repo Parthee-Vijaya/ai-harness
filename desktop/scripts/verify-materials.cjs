@@ -12,6 +12,8 @@ const helpers = require('./ui-test-helpers.cjs');
   const project = path.join(root, 'Projekt med mellemrum'); await fs.mkdir(project);
   // Materialet ligger uden for projektet, præcis som en fil på brugerens skrivebord.
   const noter = path.join(root, 'moedelokaler.md'); await fs.writeFile(noter, '# Mødelokaler\nStore sal har plads til 40 personer.\n');
+  const billede = path.join(root, 'skaermbillede.png');
+  await fs.writeFile(billede, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'));
   const mappe = path.join(root, 'referencer'); await fs.mkdir(mappe);
   await fs.writeFile(path.join(mappe, 'priser.csv'), 'lokale;pris\nStore sal;1200\n');
   await fs.writeFile(path.join(mappe, 'logo.bin'), 'ikke tekst');
@@ -106,7 +108,43 @@ const helpers = require('./ui-test-helpers.cjs');
     await page.screenshot({ path: path.join(root, 'maerke-i-skrivefeltet.png'), animations: 'disabled' });
     check('en referencemappe giver kun en liste, og kun de valgte filer gennemgås og vedhæftes');
 
+    // Et billede skrives om til PNG i hovedprocessen og vises, som det sendes.
+    await pick([billede]);
+    await page.click('#chat-materials-plus');
+    await page.click('#chat-materials-files');
+    await page.click('#materials-next');
+    await page.locator('#materials-attach').waitFor();
+    assert.equal(await page.locator('#chat-materials-dialog img.material-image').count(), 1, 'billedet vises i gennemgangen');
+    assert.match(await page.locator('#chat-materials-dialog').textContent(), /Sendes som PNG uden EXIF · 1 × 1 pixels/);
+    await page.screenshot({ path: path.join(root, 'billedgennemgang.png'), animations: 'disabled' });
+    await page.click('#materials-attach');
+    await page.locator('#chat-materials-chips .material-chip').filter({ hasText: 'skaermbillede.png' }).waitFor();
+    await page.fill('#prompt', 'Hvad står der på billedet, og hvad koster salen?');
+    const foer = requests.length;
+    await page.click('#send');
+    await page.waitForSelector('#data-dialog[open]');
+    // Udbyderen oplyser ikke billedstøtte for testmodellen, og det står i gennemgangen uden at spærre afsendelsen.
+    assert.match(await page.locator('#data-materials').innerText(), /oplyser ikke, at denne model kan læse billeder/);
+    assert.equal(await page.locator('#data-materials img.material-image').count(), 1);
+    await page.screenshot({ path: path.join(root, 'billede-foer-du-sender.png'), animations: 'disabled' });
+    await page.click('#accept-send');
+    for (let wait = 0; wait < 600 && requests.length === foer; wait++) await new Promise(resolve => setTimeout(resolve, 100));
+    assert.ok(requests.length > foer, 'det andet modelkald nåede den lokale server');
+    const medBillede = requests.at(-1).messages.filter(message => message.role === 'user').at(-1);
+    assert.ok(Array.isArray(medBillede.content), 'brugerens besked har flere dele, når et billede følger med');
+    const billeddel = medBillede.content.find(part => part.type === 'image_url');
+    assert.match(billeddel.image_url.url, /^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/);
+    assert.match(medBillede.content[0].text, /Store sal;1200/, 'tekstvedhæftningen følger med i samme besked');
+    check('et billede skrives om til PNG, vises som det sendes og lægges på brugerens egen besked');
+
     // En fil, der ændrer sig efter gennemgangen, standser afsendelsen i stedet for at sende noget andet.
+    await pick([path.join(mappe, 'priser.csv')]);
+    await page.click('#chat-materials-plus');
+    await page.click('#chat-materials-files');
+    await page.click('#materials-next');
+    await page.locator('#materials-attach').waitFor();
+    await page.click('#materials-attach');
+    await page.locator('#chat-materials-chips .material-chip').filter({ hasText: 'priser.csv' }).waitFor();
     await fs.writeFile(path.join(mappe, 'priser.csv'), 'lokale;pris\nStore sal;9999\n');
     await page.fill('#prompt', 'Hvad koster Store sal?');
     await page.click('#send');
@@ -119,7 +157,7 @@ const helpers = require('./ui-test-helpers.cjs');
     console.log(JSON.stringify({ status: 'bestået', root, requests: requests.length, checks }));
   } catch (error) {
     console.error(error);
-    try { await page?.screenshot({ path: path.join(root, 'fejl.png'), fullPage: true, timeout: 3000 }); console.error('Skærmbillede:', path.join(root, 'fejl.png')); console.error(await page?.locator('#message').textContent({ timeout: 1000 })); } catch {}
+    try { await page?.screenshot({ path: path.join(root, 'fejl.png'), fullPage: true, timeout: 3000 }); console.error('Skærmbillede:', path.join(root, 'fejl.png')); console.error(await page?.locator('#message').textContent({ timeout: 1000 })); try { await page.click('#run-review summary'); } catch {} console.error('Resultatkort:', await page?.locator('#run-review').innerText({ timeout: 1000 })); } catch {}
     throw error;
   } finally {
     await app?.close();

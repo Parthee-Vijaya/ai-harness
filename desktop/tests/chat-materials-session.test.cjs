@@ -62,7 +62,10 @@ test('en vedhæftning starter ikke en ny AI-session', async t => {
   await f.bench.send({ text: 'Første besked', fingerprint: first.fingerprint, contextBinding: first.contextBinding });
   await f.finish();
   const handle = await f.attach();
-  const second = await f.bench.prepare({ ...f.input, text: 'Anden besked', chatMaterials: handle });
+  // Med historik i beskeden er den tidligere samtale ikke tom, så forudsigelsen af den skal ramme den samme tekst,
+  // motoren faktisk får. Ellers afvises afsendelsen som en ændret kontekst.
+  const second = await f.bench.prepare({ ...f.input, text: 'Anden besked', includeHistory: true, chatMaterials: handle });
+  assert.ok(second.conversation, 'prøven har en tidligere samtale at tage med');
   await f.bench.send({ text: 'Anden besked', fingerprint: second.fingerprint, contextBinding: second.contextBinding });
   assert.equal(f.engines.length, 1, 'samme motor og samme modelsession fortsætter');
   assert.match(f.engines[0].sent[1].text, /BRUGERVALGTE VEDHÆFTNINGER/);
@@ -109,5 +112,32 @@ test('plan og afklaring får kun vedhæftningens navn og kontrolsum, ikke filtek
   assert.match(afklaring, /noter\.md/);
   assert.match(afklaring, /[0-9a-f]{64}/);
   assert.doesNotMatch(afklaring, /Store sal har plads til 40/);
+  await f.finish();
+});
+
+test('et billede sendes, selv om udbyderen ikke oplyser billedstøtte, men gennemgangen siger det', async t => {
+  const f = await fixture(t);
+  const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  const billede = path.join(path.dirname(f.file), 'skaermbillede.png');
+  await fs.writeFile(billede, PNG);
+  f.bench.chatMaterials.normalizeImage = () => ({ data: PNG, mime: 'image/png' });
+  const offered = await f.bench.chatMaterials.offerFiles(f.bench.chat, [billede]);
+  const review = await f.bench.chatMaterials.preview(f.bench.chat, { scope: offered.scope, revision: offered.revision, ids: [offered.candidates[0].id] });
+  const state = await f.bench.chatMaterials.attach(f.bench.chat, { scope: review.scope, revision: review.revision, token: review.token });
+  const handle = { scope: state.scope, revision: state.revision };
+  const uoplyst = await f.bench.prepare({ ...f.input, text: 'Hvad står der på billedet?', chatMaterials: handle });
+  assert.match(uoplyst.imageNotice, /oplyser ikke, at denne model kan læse billeder/);
+  assert.match(uoplyst.imageNotice, /sendes alligevel/);
+  // Oplyser kataloget billedstøtte, står der ingen bemærkning.
+  const connection = (await f.bench.connection((await f.bench.state()).connections[0].id));
+  f.bench.selection = async () => ({ connection, model: { id: 'test', capabilities: { vision: true } }, route: null });
+  const oplyst = await f.bench.prepare({ ...f.input, text: 'Hvad står der på billedet?', chatMaterials: handle });
+  assert.equal(oplyst.imageNotice, undefined);
+  // Billedet står som vedhæftning i beskeden, men teksten indeholder ikke billeddata.
+  await f.bench.send({ text: 'Hvad står der på billedet?', fingerprint: oplyst.fingerprint, contextBinding: oplyst.contextBinding });
+  const sendt = f.engines[0].sent[0].text;
+  assert.match(sendt, /VEDHÆFTEDE BILLEDER/);
+  assert.match(sendt, /skaermbillede\.png/);
+  assert.equal(sendt.includes('base64'), false, 'billeddata står ikke i beskedteksten');
   await f.finish();
 });

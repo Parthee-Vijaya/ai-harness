@@ -811,7 +811,7 @@ function showData(data, canSend) {
   appendModelSupport(data.modelSupport);
   appendAppContext(data.appContext);
   // Vedhæftningernes præcise indhold står i første lag, fordi det er nyt materiale, brugeren selv har valgt at dele.
-  window.chatMaterials?.disclose(data.chatMaterials || null);
+  window.chatMaterials?.disclose(data.chatMaterials || null, data.imageNotice || '');
   $('#accept-send').hidden = !canSend; $('#data-dialog').showModal();
 }
 async function sendNow(data, text) {

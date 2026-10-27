@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, protocol, session, safeStorage, Menu, shell, webFrameMain, clipboard, nativeTheme } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, protocol, session, safeStorage, Menu, shell, webFrameMain, clipboard, nativeTheme, nativeImage } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs/promises');
 const crypto = require('node:crypto');
@@ -158,6 +158,7 @@ require('./core/chat-materials-ipc.cjs').installChatMaterials({
   register: handle,
   dialog: { showOpenDialog: options => dialog.showOpenDialog(window, options) },
   exclusive,
+  normalizeImage: require('./core/image-normalizer.cjs').createImageNormalizer({ nativeImage }),
   emit: event => sendEvent(event)
 });
 async function exclusive(action, forced) {

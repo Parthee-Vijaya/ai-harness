@@ -10,12 +10,12 @@ const METHODS = Object.freeze({
   chatMaterialsAttach: 'chat-materials:attach',
   chatMaterialsRemove: 'chat-materials:remove'
 });
-function installChatMaterials({ getWorkbench, isSelected = () => true, register, dialog, exclusive, emit = () => {} }) {
+function installChatMaterials({ getWorkbench, isSelected = () => true, register, dialog, exclusive, normalizeImage, emit = () => {} }) {
   function owner(value, fields = []) {
     if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(key => !['chat', ...fields].includes(key)) || typeof value.chat !== 'string') throw new Error('Brug filvalget i den aktuelle samtale. Der modtages ingen filstier.');
     const bench = getWorkbench(), chat = bench?.chatFor(value.chat);
     if (!chat || !bench.project || bench.chatID !== chat.id || bench.chats.get(chat.id) !== chat) throw new Error('Vælg den aktuelle samtale først.');
-    bench.chatMaterials ||= new ChatMaterials({ onChange: event => emit({ ...event, root: bench.project.root }) });
+    bench.chatMaterials ||= new ChatMaterials({ normalizeImage, onChange: event => emit({ ...event, root: bench.project.root }) });
     return { bench, chat, materials: bench.chatMaterials, root: bench.project.root };
   }
   // Samtalen må ikke være skiftet, og ingen opgave må arbejde, mens valget ændres.
@@ -29,7 +29,7 @@ function installChatMaterials({ getWorkbench, isSelected = () => true, register,
     const o = owner(value); current(o);
     const result = await dialog.showOpenDialog(folder
       ? { title: 'Vælg en skrivebeskyttet referencemappe', properties: ['openDirectory', 'dontAddToRecent'] }
-      : { title: 'Vælg filer til denne besked', properties: ['openFile', 'multiSelections', 'dontAddToRecent'], filters: [{ name: 'Tekst og kode · højst 128 KB pr. fil', extensions: [...EXTENSIONS] }] });
+      : { title: 'Vælg filer til denne besked', properties: ['openFile', 'multiSelections', 'dontAddToRecent'], filters: [{ name: 'Tekst og kode 128 KB · PNG og JPEG 5 MB', extensions: [...EXTENSIONS] }] });
     current(o);
     if (result.canceled || !result.filePaths?.length) return { ...o.materials.state(o.chat), cancelled: true };
     if (folder && result.filePaths.length !== 1) throw new Error('Vælg én konkret referencemappe.');
