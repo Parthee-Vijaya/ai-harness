@@ -11,9 +11,9 @@ const { TextDecoder } = require('node:util');
 const projectFiles = require('./project-files.cjs');
 const { secretContent } = require('./git.cjs');
 const LIMITS = Object.freeze({ files: 8, fileBytes: 128 * 1024, totalBytes: 384 * 1024, mediaFileBytes: 5 * 1024 * 1024, mediaBytes: 4 * 1024 * 1024, entries: 250, candidates: 100, depth: 3 });
-const EXTENSIONS = Object.freeze(['txt', 'md', 'markdown', 'csv', 'json', 'jsonl', 'js', 'jsx', 'ts', 'tsx', 'mjs', 'cjs', 'html', 'css', 'scss', 'sql', 'py', 'sh', 'yml', 'yaml', 'xml', 'toml', 'ini', 'svg', 'png', 'jpg', 'jpeg']);
-// Billeder skrives om til PNG, før de vises og sendes; tekstfiler læses som de er.
-const kindFor = value => /\.(png|jpe?g)$/i.test(value) ? 'image' : 'text';
+const EXTENSIONS = Object.freeze(['txt', 'md', 'markdown', 'csv', 'json', 'jsonl', 'js', 'jsx', 'ts', 'tsx', 'mjs', 'cjs', 'html', 'css', 'scss', 'sql', 'py', 'sh', 'yml', 'yaml', 'xml', 'toml', 'ini', 'svg', 'png', 'jpg', 'jpeg', 'pdf']);
+// Billeder skrives om til PNG, PDF'er læses som ren tekst, og tekstfiler læses som de er.
+const kindFor = value => /\.(png|jpe?g)$/i.test(value) ? 'image' : /\.pdf$/i.test(value) ? 'pdf' : 'text';
 // Genererede og skjulte mapper hører ikke til brugerens egne filer og fylder kun gennemgangen.
 const GENERATED = new Set(['node_modules', 'dist', 'build', 'coverage', 'venv', '__pycache__', 'target']);
 // Mac gemmer OneDrive og iCloud under Library. De to mapper er brugerens egne filer; resten af Library, Keychains,
@@ -52,7 +52,7 @@ async function inspect(value, directory = false) {
   if (directory ? !stat.isDirectory() : !stat.isFile()) throw new MaterialsError(directory ? 'Vælg en almindelig mappe.' : 'Vælg en almindelig fil.', 'type');
   if (await fs.realpath(value) !== value) throw new MaterialsError('Filens sti er ændret.', 'symlink');
   const kind = kindFor(value);
-  if (!directory && (!EXTENSIONS.includes(path.extname(value).slice(1).toLowerCase()) || stat.size > BigInt(kind === 'text' ? LIMITS.fileBytes : LIMITS.mediaFileBytes))) throw new MaterialsError('Vælg tekst eller kode på højst 128 KB, eller et PNG- eller JPEG-billede på højst 5 MB.', 'format');
+  if (!directory && (!EXTENSIONS.includes(path.extname(value).slice(1).toLowerCase()) || stat.size > BigInt(kind === 'text' ? LIMITS.fileBytes : LIMITS.mediaFileBytes))) throw new MaterialsError('Vælg tekst eller kode på højst 128 KB, eller en PDF eller et PNG- eller JPEG-billede på højst 5 MB.', 'format');
   return { path: value, kind, stat, chain, signature: signature(stat), bytes: Number(stat.size) };
 }
 
@@ -65,7 +65,7 @@ async function sameChain(chain) {
 
 // Indholdet læses gennem den åbne fil, og identiteten kontrolleres både før og efter læsningen, så en fil ikke kan
 // byttes undervejs.
-async function readSnapshot(candidate, { normalizeImage } = {}) {
+async function readSnapshot(candidate, { normalizeImage, extract } = {}) {
   const before = await inspect(candidate.path);
   if (before.signature !== candidate.signature) throw new MaterialsError('En valgt fil er ændret. Vælg og gennemgå den igen.', 'changed');
   const fd = await fs.open(candidate.path, constants.O_RDONLY | (constants.O_NOFOLLOW || 0));
@@ -80,9 +80,11 @@ async function readSnapshot(candidate, { normalizeImage } = {}) {
     await sameChain(before.chain);
     if (length > maximum || BigInt(length) !== end.size || signature(start) !== signature(end)) throw new MaterialsError('Filen ændrede sig under læsningen.', 'changed');
     const data = bytes.subarray(0, length);
-    if (before.kind === 'image') {
+    if (before.kind !== 'text') {
       let media;
-      try { media = await require('./chat-media.cjs').mediaSnapshot(data, before.kind, normalizeImage); } catch (error) { throw new MaterialsError(error.message, 'format'); }
+      try { media = await require('./chat-media.cjs').mediaSnapshot(data, before.kind, normalizeImage, extract); } catch (error) { throw new MaterialsError(error.message, 'format'); }
+      // Den udtrukne PDF-tekst gennemgås på samme måde som en tekstfil, også for mulige nøgler.
+      if (media.text && secretContent(media.text)) throw new MaterialsError('Filen kan indeholde en nøgle eller adgangskode og kan ikke deles her.', 'secret');
       return { ...candidate, ...media, bytes: length, sha256: sha(data) };
     }
     let text;
@@ -94,11 +96,11 @@ async function readSnapshot(candidate, { normalizeImage } = {}) {
 }
 
 // Det, brugerfladen må se. Filstien forlader aldrig hovedprocessen; teksten følger kun med til gennemgangen.
-const publicFile = (file, text = false) => ({ id: file.id, name: file.name, folder: file.folder || '', bytes: file.bytes, kind: file.kind || 'text', ...(file.mime ? { mime: file.mime } : {}), ...(file.sha256 ? { sha256: file.sha256 } : {}), ...(file.invalid ? { changed: true } : {}), ...(text ? { text: file.text, ...(file.dataURL ? { dataURL: file.dataURL, normalizedHash: file.normalizedHash, normalizedBytes: file.normalizedBytes, width: file.width, height: file.height } : {}) } : {}) });
+const publicFile = (file, text = false) => ({ id: file.id, name: file.name, folder: file.folder || '', bytes: file.bytes, kind: file.kind || 'text', ...(file.mime ? { mime: file.mime } : {}), ...(file.sha256 ? { sha256: file.sha256 } : {}), ...(file.invalid ? { changed: true } : {}), ...(text ? { text: file.text, ...(file.pages ? { pages: file.pages } : {}), ...(file.dataURL ? { dataURL: file.dataURL, normalizedHash: file.normalizedHash, normalizedBytes: file.normalizedBytes, width: file.width, height: file.height } : {}) } : {}) });
 
 class ChatMaterials {
-  constructor({ onChange = () => {}, normalizeImage } = {}) { this.contexts = new WeakMap(); this.onChange = onChange; this.normalizeImage = normalizeImage; }
-  read(file) { return readSnapshot(file, { normalizeImage: this.normalizeImage }); }
+  constructor({ onChange = () => {}, normalizeImage, extract } = {}) { this.contexts = new WeakMap(); this.onChange = onChange; this.normalizeImage = normalizeImage; this.extract = extract; }
+  read(file) { return readSnapshot(file, { normalizeImage: this.normalizeImage, extract: this.extract }); }
   checkTotals(files) {
     const all = [...files];
     if (all.length > LIMITS.files || all.reduce((sum, file) => sum + Buffer.byteLength(file.text || ''), 0) > LIMITS.totalBytes || all.reduce((sum, file) => sum + (file.normalizedBytes || 0), 0) > LIMITS.mediaBytes) throw new MaterialsError('Det samlede valg overstiger otte filer, 384 KB tekst eller 4 MB billeder.', 'large');

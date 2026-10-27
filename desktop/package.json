@@ -29,7 +29,7 @@
     "test:mistral": "node scripts/verify-mistral.cjs",
     "test:live": "node scripts/verify-live-agent.cjs",
     "test:setup": "node scripts/verify-setup.cjs",
-  "test:key-window": "node scripts/verify-key-window.cjs",
+    "test:key-window": "node scripts/verify-key-window.cjs",
     "test:hosting": "node scripts/verify-hosting.cjs",
     "test:openrouter": "node scripts/verify-live-openrouter.cjs",
     "test:preferences": "node scripts/verify-preferences.cjs",
@@ -82,6 +82,7 @@
     "@anthropic-ai/sandbox-runtime": "0.0.81",
     "@opencode-ai/plugin": "1.18.33",
     "electron-updater": "6.8.9",
+    "pdfjs-dist": "6.4.299",
     "semver": "7.8.5"
   }
 }

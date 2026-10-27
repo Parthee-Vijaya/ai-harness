@@ -26,3 +26,4 @@
 #data-materials p { margin: 0 0 4px; font-size: 12px; overflow-wrap: anywhere; }
 .material-image { display: block; max-width: 100%; max-height: 260px; margin-bottom: 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--fill-strong); }
 .materials-notice { margin: 4px 0 0; padding: 8px 10px; border: 1px solid var(--warning-line); border-radius: 8px; background: var(--warning-bg); color: var(--warning-ink); font-size: 12px; }
+#chat-materials-dialog select, #data-materials select { margin-bottom: 6px; }

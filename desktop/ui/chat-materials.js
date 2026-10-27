@@ -16,6 +16,23 @@
   const handle = () => state && { scope: state.scope, revision: state.revision };
   // Et billede vises, som det sendes: omskrevet til PNG uden EXIF. Teksten vises ordret.
   function content(file) {
+    if (file.kind === 'pdf') {
+      const block = el('div'), text = el('pre');
+      text.tabIndex = 0;
+      block.append(el('p', 'Udtrukket tekst med sidetal. Der er ikke udført OCR eller billedanalyse.', 'hint'));
+      const pages = file.pages || [];
+      // Én side vises bare. Flere sider får ét valg, så gennemgangen ikke bliver en mur af tekst.
+      if (pages.length > 1) {
+        const select = el('select');
+        select.setAttribute('aria-label', 'Vælg side i PDF’en');
+        for (const page of pages) { const choice = el('option', `Side ${page.page} af ${pages.length}`); choice.value = String(page.page); select.append(choice); }
+        select.onchange = () => { text.textContent = pages.find(page => String(page.page) === select.value)?.text || ''; };
+        select.onchange();
+        block.append(select);
+      } else text.textContent = pages[0]?.text || file.text;
+      block.append(text);
+      return block;
+    }
     if (file.kind !== 'image') return el('pre', file.text);
     const block = el('div');
     if (!/^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/.test(file.dataURL || '')) { block.textContent = 'Billedet kunne ikke vises. Gennemgå filvalget igen.'; return block; }

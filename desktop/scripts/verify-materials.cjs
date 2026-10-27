@@ -7,6 +7,7 @@ const os = require('node:os');
 const path = require('node:path');
 const http = require('node:http');
 const helpers = require('./ui-test-helpers.cjs');
+const { pdf } = require('../tests/pdf-fixture.cjs');
 (async () => {
   const root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'aura-vedhaeftninger-')));
   const project = path.join(root, 'Projekt med mellemrum'); await fs.mkdir(project);
@@ -14,6 +15,8 @@ const helpers = require('./ui-test-helpers.cjs');
   const noter = path.join(root, 'moedelokaler.md'); await fs.writeFile(noter, '# Mødelokaler\nStore sal har plads til 40 personer.\n');
   const billede = path.join(root, 'skaermbillede.png');
   await fs.writeFile(billede, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'));
+  const dokument = path.join(root, 'tilbud.pdf');
+  await fs.writeFile(dokument, pdf('Store sal koster 1200 kr. pr. dag.', 2));
   const mappe = path.join(root, 'referencer'); await fs.mkdir(mappe);
   await fs.writeFile(path.join(mappe, 'priser.csv'), 'lokale;pris\nStore sal;1200\n');
   await fs.writeFile(path.join(mappe, 'logo.bin'), 'ikke tekst');
@@ -136,6 +139,34 @@ const helpers = require('./ui-test-helpers.cjs');
     assert.match(billeddel.image_url.url, /^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/);
     assert.match(medBillede.content[0].text, /Store sal;1200/, 'tekstvedhæftningen følger med i samme besked');
     check('et billede skrives om til PNG, vises som det sendes og lægges på brugerens egen besked');
+
+    // En PDF læses lokalt som ren tekst med sidetal, og teksten gennemgås, før den sendes.
+    await pick([dokument]);
+    await page.click('#chat-materials-plus');
+    await page.click('#chat-materials-files');
+    await page.click('#materials-next');
+    await page.locator('#materials-attach').waitFor({ timeout: 60000 });
+    const pdfGennemgang = await page.locator('#chat-materials-dialog').textContent();
+    assert.match(pdfGennemgang, /Udtrukket tekst med sidetal/);
+    assert.match(pdfGennemgang, /ikke udført OCR/);
+    assert.match(pdfGennemgang, /Store sal koster 1200 kr\. pr\. dag\./);
+    assert.equal(await page.locator('#chat-materials-dialog select option').count(), 2, 'begge sider kan vælges');
+    await page.screenshot({ path: path.join(root, 'pdf-gennemgang.png'), animations: 'disabled' });
+    await page.click('#materials-attach');
+    await page.locator('#chat-materials-chips .material-chip').filter({ hasText: 'tilbud.pdf' }).waitFor();
+    await page.fill('#prompt', 'Hvad står der i tilbuddet?');
+    const foerPdf = requests.length;
+    await page.click('#send');
+    await page.waitForSelector('#data-dialog[open]');
+    assert.match(await page.locator('#data-materials').textContent(), /Store sal koster 1200 kr\. pr\. dag\./);
+    await page.click('#accept-send');
+    for (let wait = 0; wait < 600 && requests.length === foerPdf; wait++) await new Promise(resolve => setTimeout(resolve, 100));
+    assert.ok(requests.length > foerPdf, 'PDF-beskeden nåede den lokale server');
+    const pdfSendt = JSON.stringify(requests.at(-1).messages);
+    assert.match(pdfSendt, /Store sal koster 1200 kr\. pr\. dag\./);
+    assert.match(pdfSendt, /\[Side 2\]/);
+    assert.equal(pdfSendt.includes(dokument), false, 'PDF-filens sti sendes ikke');
+    check('en PDF læses lokalt som tekst med sidetal, gennemgås og sendes uden OCR');
 
     // En fil, der ændrer sig efter gennemgangen, standser afsendelsen i stedet for at sende noget andet.
     await pick([path.join(mappe, 'priser.csv')]);
