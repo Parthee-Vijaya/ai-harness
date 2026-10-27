@@ -747,6 +747,19 @@ async function loadRoutes(saved = '') {
 function selection() { return { effort: view?.effort || null, includeHistory: $('#include-history').checked, mode: $('#work-mode').value, planID: activePlan?.id, connectionID: $('#connection-select').value, modelID: $('#model-select').value, routeID: $('#route-select').value, references: [...document.querySelectorAll('#reference-choices input:checked')].map(el => el.value), fileRefs: window.workspace?.references() || [], previewTarget: window.workspace?.target()?.id || null, view: window.previewViewSize?.() || null, chat: view.id }; }
 const detailLabels = { projectInstructions: 'Projektets egne regler, der sendes', workspace: 'Arbejdsmappe', mode: 'Arbejdsmåde', brief: 'Projektbrief, der sendes', previewReferenceText: 'Valgt element, der sendes', conversation: 'Tidligere samtale, der sendes', projectGuidance: 'Appens vejledning om projektvalg og design', planContext: 'Plan og afklaring, der sendes', projectChoices: 'Projektets opstartsvalg', projectDesign: 'Projektets designvalg', fileReferences: 'Filhenvisninger i beskeden', connection: 'Forbindelse', model: 'Model', endpoint: 'Serveradresse', recipients: 'Modtagere', region: 'Behandlingssted', retention: 'Opbevaring', training: 'Brug til træning', price: 'Pris og gratisbegrænsninger', capabilities: 'Modelmuligheder', material: 'Hvad sendes?', references: 'Udvalgte private referencer', skills: 'Skills, AI’en kan hente', localStorage: 'Lokal historik og yderligere netværk', security: 'Forbindelsens sikkerhed', source: 'Kilde', checkedAt: 'Dokumentation kontrolleret', evidence: 'Grundlag' };
 // Kort resumé i almindeligt dansk. Alle oplysninger ligger under "Se alle oplysninger".
+// Modelstøtte: kun det, udbyderens katalog oplyser. Aura viser aldrig sine egne iagttagelser som prøver, og
+// "ikke oplyst" er ikke det samme som understøttet. Efter forslag i #37.
+function appendModelSupport(support) {
+  if (!support) return;
+  const word = value => value === true ? 'understøttet' : value === false ? 'ikke understøttet' : 'ikke oplyst';
+  const line = item => `Værktøjer: ${word(item.tools)} · Billeder: ${word(item.images)}`;
+  const dd = node('dd');
+  dd.append(node('p', line(support.model)));
+  if (support.route) dd.append(node('p', `Valgt rute · ${line(support.route).toLocaleLowerCase('da-DK')}`));
+  const read = support.checkedAt ? `Læst fra udbyderens katalog ${new Date(support.checkedAt).toLocaleString('da-DK', { dateStyle: 'short', timeStyle: 'short' })}.` : 'Det vides ikke, hvornår kataloget sidst blev læst.';
+  dd.append(node('p', `${read} Det er udbyderens egne oplysninger, ikke en prøve Aura har kørt.`, 'hint'));
+  $('#data-details').append(node('dt', 'Modelstøtte ifølge udbyderen'), dd);
+}
 function showData(data, canSend) {
   $('#data-summary').replaceChildren();
   const unknown = [data.region, data.retention, data.training, data.price].filter(v => /ukendt|ikke verificeret/i.test(String(v)));
@@ -778,6 +791,7 @@ function showData(data, canSend) {
     else dd.textContent = text;
     $('#data-details').append(node('dt', label), dd);
   }
+  appendModelSupport(data.modelSupport);
   $('#accept-send').hidden = !canSend; $('#data-dialog').showModal();
 }
 async function sendNow(data, text) {
@@ -1170,10 +1184,10 @@ $('#start-idea').onclick = () => {
   if ($('#prompt').value.trim()) { message('Din kladde er bevaret. Send eller ryd den, før du forbereder en ny besked.'); $('#prompt').focus(); return; }
   const wishes = [['idea-platform', 'Platform'], ['idea-data', 'Data'], ['idea-ui', 'Brugerflade'], ['idea-design', 'Designværktøjer'], ['idea-backend', 'Backend']]
     .filter(([id]) => $(`#${id}`).value).map(([id, label]) => ({ label, value: $(`#${id}`).value }));
-  // Projektidéen er en byggeopgave. Et arbejdsmådevalg eller en gemt kladde med tekst har dog forrang; Planlæg vælges
-  // kun af brugeren. En tom kladde tæller ikke med: ellers afgjorde det tilfældige tidspunkt for kladdegemningen,
-  // om idéen landede i Byg eller i Samtale.
-  if (!view.modeChosen && !view.draft?.text?.trim()) $('#work-mode').value = 'free';
+  // Projektidéen er en byggeopgave; kun brugerens eget valg af arbejdsmåde har forrang, og Planlæg vælges kun af
+  // brugeren. Kladden spørges der ikke om: feltet er tomt her, fordi en kladde med tekst allerede har afbrudt
+  // ovenfor, og den gemte kladde opdateres forsinket. Ellers afgjorde tilfældig timing, om idéen landede i Byg.
+  if (!view.modeChosen) $('#work-mode').value = 'free';
   updateWorkMode();
   // Med planlægning kommer ønskerne i projektbriefen, som følger med hver besked. Uden står de i beskeden som før.
   const inBrief = featureOn('planlaegning') && wishes.length;

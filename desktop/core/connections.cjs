@@ -167,6 +167,13 @@ function azureEndpoint(value) {
   if (url.protocol !== 'https:' || url.port || !/^[a-z0-9-]+\.(openai\.azure\.com|services\.ai\.azure\.com)$/.test(url.hostname) || !['/', '/openai/v1'].includes(url.pathname)) throw new Error('Brug ressourcens HTTPS-adresse fra Azure OpenAI eller Foundry, fx https://mit-projekt.openai.azure.com.');
   return `${url.origin}/openai/v1`;
 }
+// Udbyderne oplyser billedstøtte tre forskellige steder. Står den ingen af dem, er den ikke oplyst.
+function visionFrom(model) {
+  if (typeof model.capabilities?.vision === 'boolean') return { vision: model.capabilities.vision };
+  if (typeof model.capabilities?.image_input?.supported === 'boolean') return { vision: model.capabilities.image_input.supported };
+  if (Array.isArray(model.architecture?.input_modalities)) return { vision: model.architecture.input_modalities.includes('image') };
+  return {};
+}
 function usesResponses(connection) { return (connection.protocol || definitions[connection.kind]?.protocol) === 'responses'; }
 // Fjerner nøgler og nøglelignende tekst fra et svar, før det vises bag Se detaljer.
 function redact(text, keys = []) {
@@ -251,7 +258,7 @@ async function listModels(connection, key) {
   if (connection.kind === 'azure') return [{ id: connection.deployment, name: connection.deployment, price: null, capabilities: { tools: null }, configuredDeployment: true }];
   return models.slice(0, 5000).filter(model => model && model.capabilities?.completion_chat !== false && !(connection.kind === 'corti' && /embedding/.test(model.id)) && (connection.kind !== 'openai' || /^(gpt-|chatgpt-|codex-|o\d)/.test(model.id) && !/audio|realtime|transcribe|image|tts|search|deep-research/.test(model.id))).map(model => ({
     id: ollama ? model.name : model.id, name: model.name || model.display_name || model.id,
-    price: model.pricing || null, capabilities: { tools: model.capabilities?.function_calling ?? model.supported_parameters?.includes('tools') ?? null, ...catalogReasoning(model) },
+    price: model.pricing || null, capabilities: { tools: model.capabilities?.function_calling ?? model.supported_parameters?.includes('tools') ?? null, ...catalogReasoning(model), ...visionFrom(model) },
     limits: { context: tokenCount(model.context_length ?? model.max_context_length ?? model.context_window ?? model.max_input_tokens), output: tokenCount(model.top_provider?.max_completion_tokens ?? model.max_output_tokens ?? model.max_tokens) },
     local: ollama && !model.remote_host && !/:.*cloud/.test(model.name) ? 'Ikke verificeret' : null
   })).filter(model => typeof model.id === 'string');
@@ -260,7 +267,7 @@ async function routes(connection, key, model) {
   assertSupported(connection);
   if (connection.kind !== 'openrouter') return [];
   const data = await requestJSON(`${connection.baseURL}/models/${model.split('/').map(encodeURIComponent).join('/')}/endpoints`, { key });
-  return (data.data?.endpoints || []).map(item => ({ id: item.tag || item.provider_name, name: item.provider_name, price: item.pricing || null, policy: item.data_policy || null })).filter(route => route.id);
+  return (data.data?.endpoints || []).map(item => ({ id: item.tag || item.provider_name, name: item.provider_name, price: item.pricing || null, policy: item.data_policy || null, capabilities: { tools: item.supported_parameters?.includes('tools') ?? null, vision: typeof item.capabilities?.vision === 'boolean' ? item.capabilities.vision : Array.isArray(item.input_modalities) ? item.input_modalities.includes('image') : null } })).filter(route => route.id);
 }
 function disclosure(connection, model, route = null) {
   assertSupported(connection);

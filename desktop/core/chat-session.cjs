@@ -235,6 +235,9 @@ class ChatSession {
     // Resuméet før afsendelse vises igen, når modtager, model, vilkår, pris eller delt materiale ændrer sig. Skift fra plan til byg er ikke en ny modtager.
     Object.assign(disclosure, modelConsent.review(selection.connection.id, disclosure, settings, context.projectInstructions?.hash));
     disclosure.modelName = selection.model.name || selection.model.id;
+    // Udbyderens egne oplysninger om værktøjs- og billedstøtte. Står efter fingeraftrykket, så et nyt
+    // katalogtidspunkt ikke får resuméet til at dukke op igen.
+    disclosure.modelSupport = require('./model-support.cjs').catalogSupport(selection.model, selection.route, bench.catalogTimes?.get(selection.connection.id) || null);
     // Forhåndsvisningens størrelse til før/efter-billederne. Kun tal; siden findes i hovedprocessen.
     const view = input.view && Number.isFinite(input.view.width) && Number.isFinite(input.view.height) ? { width: Math.round(input.view.width), height: Math.round(input.view.height) } : null;
     if ((bench.connectionVersions.get(input.connectionID) || 0) !== connectionVersion) throw new Error('Forbindelsen blev ændret. Gennemgå oplysningerne igen.');

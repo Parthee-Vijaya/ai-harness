@@ -95,6 +95,11 @@ const { run } = require('../core/git.cjs');
   assert.doesNotMatch(await page.locator('#data-lead').textContent(),/planen/,'før første plan findes, må resuméet ikke påstå, at den sendes');
   assert.match(await page.locator('#data-details').textContent(),/Ukendt/); assert.equal(await page.isVisible('#data-warning'),true);
   assert.match(await page.locator('#data-details').textContent(), /Projektets egne regler, der sendes[\s\S]*DESKTOP-PROJEKTREGEL/);
+  // Modelstøtte står som udbyderens egne oplysninger, og det, udbyderen ikke oplyser, står som ikke oplyst.
+  const støtte = await page.locator('#data-details').textContent();
+  assert.match(støtte, /Modelstøtte ifølge udbyderen/);
+  assert.match(støtte, /Værktøjer: (understøttet|ikke understøttet|ikke oplyst) · Billeder: (understøttet|ikke understøttet|ikke oplyst)/);
+  assert.match(støtte, /udbyderens egne oplysninger, ikke en prøve Aura har kørt/);
   await page.locator('#data-details').evaluate(el => { el.closest('details').open = true; el.querySelector('details').open = true; });
   await page.screenshot({path:path.join(root,'projektregler.png'),animations:'disabled'});
   await page.click('#accept-send');
