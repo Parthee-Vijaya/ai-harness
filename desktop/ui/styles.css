@@ -321,7 +321,25 @@ h1[tabindex="-1"]:focus, h2[tabindex="-1"]:focus { outline: none; }
 /* Guidens trin afløser hinanden. Tekniske valg ligger uden for første skærm. */
 body.setup-guided .sidebar, body.setup-guided .app-content > header { display: none; }
 body.setup-guided .app-content { margin-left: 0; }
-#setup { max-width: 900px; padding: clamp(28px, 8vh, 88px) 40px 32px; }
+#setup { max-width: 900px; padding: clamp(28px, 8vh, 88px) 40px 32px; display: grid; grid-template-columns: minmax(0, 1fr); column-gap: 36px; align-content: start; }
+#setup > * { grid-column: 1 / -1; }
+#setup > [data-setup-step] { grid-column: 1; }
+/* Statuspanelet står til højre for trinnet og følger med, når man ruller. */
+#setup:has(#setup-status:not([hidden])) { grid-template-columns: minmax(0, 1fr) 250px; }
+#setup-status { grid-column: 2; align-self: start; position: sticky; top: 24px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+#setup-status h2 { margin: 0 0 10px; font-size: 13px; letter-spacing: .02em; }
+#setup-status-choice { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+#setup-status-choice img { object-fit: contain; }
+#setup-status-path { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+#setup-status-path li { display: grid; gap: 1px; padding-left: 14px; border-left: 2px solid var(--line); }
+#setup-status-path li[data-active="true"] { border-left-color: var(--accent); }
+#setup-status-path strong { font-size: 12px; }
+#setup-status-path span { font-size: 12px; line-height: 1.5; color: var(--muted); }
+#setup-status-note { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--line-subtle); font-size: 12px; line-height: 1.55; color: var(--muted); }
+/* Grønt bruges kun, når en kontrol faktisk er lykkedes. */
+#setup-status-note[data-state="checked"] { color: var(--success-ink); }
+#setup-status-note[data-state="error"] { color: var(--danger-ink); }
+@media (max-width: 900px) { #setup:has(#setup-status:not([hidden])) { grid-template-columns: minmax(0, 1fr); } #setup-status { grid-column: 1; position: static; } }
 .setup-heading { margin: 28px 0 32px; }
 .setup-topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .setup-heading .eyebrow { color: var(--muted); letter-spacing: .12em; font-size: 11px; font-weight: 650; }

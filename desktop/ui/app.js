@@ -144,6 +144,30 @@ function setupControls() {
   $('#setup-continue').hidden = verifiedConnection !== id || !id;
   $('#setup-test').hidden = Boolean(id && verifiedConnection === id);
   $('#setup-add-another').hidden = !id || verifiedConnection !== id;
+  updateSetupStatus();
+}
+// Det rolige statuspanel til højre i opsætningen. Det læser kun det, appen allerede ved: ingen netkald, kun
+// textContent, og grønt først, når en kontrol faktisk er lykkedes. Efter forslag i #17.
+const STATUS_STEPS = ['choice', 'provider', 'saved', 'local'];
+let previewKind = '';
+function updateSetupStatus() {
+  const panel = $('#setup-status');
+  panel.hidden = !setupActive || !STATUS_STEPS.includes(setupStep);
+  if (panel.hidden) return;
+  const details = setupStep === 'provider' && $('#setup-provider').dataset.view === 'details';
+  const saved = (state?.connections || []).find(c => c.id === (setupStep === 'saved' ? $('#setup-connection').value : details ? $('#connection-id').value : ''));
+  const kind = details ? $('#provider-kind').value : setupStep === 'local' ? 'ollama' : saved?.kind || previewKind || '';
+  const name = saved?.name || (kind ? providerCards.find(item => item.kind === kind)?.name || state?.definitions[kind]?.name || kind : '');
+  const view = window.SetupStatus.describe({ kind, name, saved: Boolean(saved), preview: Boolean(previewKind), check: saved ? connectionChecks.get(saved.id) : null, verified: Boolean(saved && verifiedConnection === saved.id) });
+  const logo = kind ? window.ProviderBrand.asset(kind) : null;
+  $('#setup-status-logo').hidden = !logo;
+  if (logo) $('#setup-status-logo').src = logo;
+  $('#setup-status-provider').textContent = view.provider;
+  $('#setup-status-connection').textContent = view.connection;
+  $('#setup-status-model').textContent = view.model;
+  for (const [index, item] of [...$('#setup-status-path').children].entries()) item.dataset.active = String(view.active[index] === true);
+  $('#setup-status-note').dataset.state = view.state;
+  $('#setup-status-note').textContent = view.note;
 }
 function moveConnectionForm(guided) {
   const parent = guided ? $('#setup-provider-body') : $('#connection-form-home');
@@ -178,11 +202,14 @@ const providerCards = [
   { kind: 'openrouter', name: 'OpenRouter', text: 'OpenRouter API.' }
 ];
 function providerPicker() {
+  previewKind = '';
   $('#setup-provider').dataset.view = 'choose'; $('#setup-provider-body').hidden = true; $('#provider-cards').hidden = false;
   $('#provider-other-cards').hidden = true; $('#provider-more').hidden = false;
   $('#setup-title').textContent = 'Hvem vil du forbinde?'; $('#setup-subtitle').textContent = 'Vælg den udbyder eller server, du har adgang til.'; $('#setup-title').focus();
+  updateSetupStatus();
 }
 function chooseProvider(kind) {
+  previewKind = '';
   $('#provider-kind').value = kind; updateProvider();
   $('#setup-provider').dataset.view = 'details'; $('#provider-cards').hidden = true;
   $('#provider-other-cards').hidden = true; $('#provider-more').hidden = true;
@@ -190,16 +217,22 @@ function chooseProvider(kind) {
   $('#setup-subtitle').textContent = ['ollama', 'compatible'].includes(kind) ? 'Indtast adressen på din modelserver.' : 'Brug din adgangsnøgle fra udbyderen.';
   $('#connection-advanced').hidden = false;
   $('#setup-provider-body').hidden = false; $('#setup-title').focus();
+  updateSetupStatus();
 }
 // Ollama nås gennem "AI på min computer" og står derfor ikke mellem udbyderne.
 const otherProviderKinds = ['azure', 'compatible', 'openai', 'zen', 'openrouter'];
 function providerCard(kind) {
   const item = providerCards.find(entry => entry.kind === kind) || { kind, name: kind, text: '' };
   const card = node('button', undefined, 'provider-card'); card.type = 'button'; card.dataset.kind = item.kind;
-  const logo = node('img'); logo.src = `provider-${item.kind}.svg`; logo.alt = ''; logo.width = 28; logo.height = 28;
+  const logo = node('img'); logo.src = window.ProviderBrand.asset(item.kind) || ''; logo.alt = ''; logo.width = 28; logo.height = 28;
   const status = node('small'); status.dataset.providerStatus = item.kind;
   card.append(logo, node('strong', item.name), node('span', item.text), status);
-  card.onclick = () => chooseProvider(item.kind); return card;
+  card.onclick = () => chooseProvider(item.kind);
+  // Forhåndsvisning: panelet viser den udbyder, musen hviler på, uden at vælge eller sende noget.
+  const preview = value => { previewKind = value; updateSetupStatus(); };
+  card.onpointerenter = () => preview(item.kind); card.onfocus = () => preview(item.kind);
+  card.onpointerleave = () => preview(''); card.onblur = () => preview('');
+  return card;
 }
 function renderProviderCards() {
   $('#provider-cards').replaceChildren(...featuredProviders.map(item => providerCard(item.kind)));
@@ -651,7 +684,7 @@ function updateProvider() {
   for (const el of [$('#base-url'), $('#base-url').previousElementSibling, $('#base-url-help').nextElementSibling]) el.hidden = isAzure;
   $('#base-url').value = definition.baseURL; $('#connection-advanced').open = ['ollama', 'compatible'].includes($('#provider-kind').value); $('#base-url').readOnly = !['ollama', 'compatible'].includes($('#provider-kind').value);
   if (!$('#connection-id').value) { const used = new Set((state?.connections || []).map(c => c.name)); let name = definition.name, number = 2; while (used.has(name)) name = `${definition.name} ${number++}`; $('#connection-name').value = name; }
-  updateKeyRow();
+  updateKeyRow(); updateSetupStatus();
 }
 // Nøglen indtastes i nøglevinduet. Formularen siger kun, om der er en gemt nøgle, og hvad næste skridt er.
 function updateKeyRow() {

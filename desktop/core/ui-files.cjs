@@ -30,6 +30,7 @@ module.exports = new Set([
   'promte-preview.js',
   'provider-brand.js',
   'server.js',
+  'setup-status.js',
   'share-view.js',
   'styles.css',
   'updates.js',

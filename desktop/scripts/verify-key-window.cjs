@@ -52,6 +52,16 @@ const PAGE = 'aura-noegle://vindue/index.html';
     // ---------- Formularen har intet felt til nøglen ----------
     await helpers.openSetup(page); await page.click('#setup-add-provider');
     assert.equal(await page.locator('#provider-cards button').count(), 4, 'fire udbydere i første lag');
+    // Det rolige statuspanel: intet valgt endnu, og en forhåndsvisning, når musen hviler på et kort.
+    assert.equal(await page.isVisible('#setup-status'), true, 'statuspanelet står til højre i opsætningen');
+    // Musen kan stadig hvile på et kort efter forrige klik, så den flyttes væk, før det tomme panel måles.
+    await page.mouse.move(0, 0);
+    await page.waitForFunction(() => document.querySelector('#setup-status-note').dataset.state === 'none');
+    await page.hover('#provider-cards [data-kind="corti"]');
+    await page.waitForFunction(() => document.querySelector('#setup-status-note').dataset.state === 'preview');
+    assert.equal(await page.locator('#setup-status-provider').textContent(), 'Corti');
+    assert.match(await page.locator('#setup-status-connection').textContent(), /Forhåndsvisning/);
+    assert.match(await page.locator('#setup-status-note').textContent(), /Du kigger kun/);
     await page.click('#provider-cards [data-kind="anthropic"]');
     await helpers.assertNoKeyFields(page);
     assert.equal(await page.isVisible('#save-connection'), false, 'en ny forbindelse hos en udbyder gemmes kun med en kontrolleret nøgle');
@@ -92,6 +102,10 @@ const PAGE = 'aura-noegle://vindue/index.html';
     assert.match(await page.locator('#connection-feedback').textContent(), /mellemrum|anførselstegn|Bearer foran/);
     await page.locator('#setup-continue:not([hidden])').waitFor();
     assert.equal(await page.isDisabled('#setup-continue'), false, 'kataloget fra kontrollen gælder som kontrollen');
+    // Grønt står først her, hvor en kontrol faktisk er lykkedes.
+    assert.equal(await page.locator('#setup-status-note').getAttribute('data-state'), 'checked');
+    assert.match(await page.locator('#setup-status-note').textContent(), /Modelkataloget svarer/);
+    assert.equal(await page.locator('#setup-status-connection').textContent(), 'Kontrolleret i denne session.');
     assert.equal(models, 2, 'forbindelsen kontrolleres ikke igen');
     const state = (await page.evaluate(() => window.harness.connectionState())).value;
     assert.equal(state.connections.length, 1); assert.equal(state.connections[0].hasKey, true);

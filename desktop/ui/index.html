@@ -12,6 +12,7 @@
 <script src="history-pages.js" defer></script>
 <script src="markdown.js" defer></script>
 <script src="provider-brand.js" defer></script>
+<script src="setup-status.js" defer></script>
 <script src="app.js" defer></script>
 <script src="workspace.js" defer></script>
 <script src="live-work.js" defer></script>
@@ -86,6 +87,16 @@
     <div id="setup-features-list" class="features-list"></div>
     <div class="setup-actions"><button id="features-continue" class="primary">Fortsæt uden funktioner</button></div>
   </section>
+  <aside id="setup-status" aria-labelledby="setup-status-title" hidden>
+<h2 id="setup-status-title">Din opsætning</h2>
+<p id="setup-status-choice"><img id="setup-status-logo" alt="" width="18" height="18" hidden><span id="setup-status-provider"></span></p>
+<ol id="setup-status-path">
+<li><strong>Din computer</strong><span>Aura og dine projektfiler bliver her.</span></li>
+<li><strong>Forbindelse</strong><span id="setup-status-connection"></span></li>
+<li><strong>Model</strong><span id="setup-status-model"></span></li>
+</ol>
+<p id="setup-status-note" role="status"></p>
+</aside>
   <div class="setup-footer"><button id="setup-local" class="text-button">Vælg senere</button><button id="setup-advanced" class="text-button">Avanceret opsætning</button></div>
 </main>
 <main id="onboarding">
