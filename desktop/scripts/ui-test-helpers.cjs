@@ -102,19 +102,54 @@ async function openSetup(page) {
   await page.waitForFunction(() => { const dialog = document.querySelector('#connections-dialog'); return dialog.open && !dialog.getAnimations().some(animation => animation.playState === 'running'); });
   await page.click('#connection-add'); await page.waitForSelector('#setup:not([hidden])');
 }
+// Nøgler indtastes kun i nøglevinduet, som har sin egen side og sin egen session. Prøverne finder den som en ny side
+// i app.windows(); Playwright melder først et lukket vindue et øjeblik efter, så en brugt side tælles ikke med igen.
+const KEY_PAGE = 'aura-noegle://vindue/index.html';
+const usedKeyPages = new WeakMap();
+async function keyWindow(app) {
+  if (!app) throw new Error('Nøglevinduet kræver electronApp, fordi det er et vindue for sig.');
+  if (!usedKeyPages.has(app)) usedKeyPages.set(app, new Set());
+  const used = usedKeyPages.get(app);
+  for (let round = 0; round < 300; round++) {
+    const page = app.windows().find(candidate => !candidate.isClosed() && !used.has(candidate) && candidate.url() === KEY_PAGE);
+    if (page) { used.add(page); await page.locator('#key-value').waitFor(); return page; }
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+  throw new Error('Nøglevinduet kom ikke frem.');
+}
+// Indtaster en nøgle i nøglevinduet. button vælger Kontrollér og gem, Gem alligevel, Annuller eller 'escape'.
+// Siden gives tilbage, så prøven kan læse fejlteksten; ved Annuller og Escape er vinduet lukket igen.
+async function enterCredential(app, value, { button = '#key-submit' } = {}) {
+  const page = await keyWindow(app);
+  if (value !== undefined) await page.fill('#key-value', value);
+  // Annuller og Escape lukker vinduet med det samme, så Playwrights eget kald afbrydes. Det er meningen.
+  if (button === 'escape') { await page.keyboard.press('Escape').catch(() => {}); return page; }
+  await page.click(button).catch(error => { if (!/closed/.test(String(error))) throw error; });
+  return page;
+}
 // En forbindelse tilføjes ad samme vej som en bruger: Tilføj forbindelse › Jeg har en adgangsnøgle › udbyderens kort.
-// Svarer serveren med modeller, fortsætter prøven med forbindelsen; ellers vælger den senere.
-async function addConnection(page, { kind = 'compatible', name, baseURL, apiKey } = {}) {
-  await openSetup(page); await page.click('#setup-add-provider'); await page.click(`#provider-cards [data-kind="${kind}"]`);
+// Svarer serveren med modeller, fortsætter prøven med forbindelsen; ellers vælger den senere. En nøgle kræver app.
+async function addConnection(page, { kind = 'compatible', name, baseURL, apiKey, app } = {}) {
+  await openSetup(page); await page.click('#setup-add-provider'); await chooseProviderCard(page, kind);
   if ((name !== undefined || baseURL !== undefined) && !await page.locator('#connection-advanced').evaluate(el => el.open)) await page.click('#connection-advanced > summary');
   if (name !== undefined) await page.fill('#connection-name', name);
   if (baseURL !== undefined) await page.fill('#base-url', baseURL);
-  if (apiKey) await page.fill('#api-key', apiKey);
-  await page.click('#save-connection');
+  if (apiKey) { await page.click('#enter-key'); await enterCredential(app, apiKey); }
+  else await page.click('#save-connection');
   await page.waitForFunction(() => document.querySelector('#setup').dataset.step === 'saved' && !/Henter/.test(document.querySelector('#setup-ai').textContent));
   if (await page.isVisible('#setup-continue') && await page.isEnabled('#setup-continue')) await page.click('#setup-continue'); else await page.click('#setup-local');
   await page.waitForSelector('#setup', { state: 'hidden' });
   return (await page.evaluate(() => window.harness.connectionState())).value.connections.at(-1);
+}
+// Fire udbydere står i første lag. De øvrige ligger bag "Bruger du en anden udbyder? Vælg en anden".
+async function chooseProviderCard(page, kind) {
+  if (!await page.locator(`#provider-cards [data-kind="${kind}"]`).count()) await page.click('#provider-more');
+  await page.click(`[data-kind="${kind}"]`);
+}
+// Hovedvinduet må ikke have et felt, en nøgle kan skrives i.
+async function assertNoKeyFields(page) {
+  const found = await page.evaluate(() => [...document.querySelectorAll('input[type=password], #api-key, #hosting-token, #deployment-token')].map(el => el.id || el.type));
+  if (found.length) throw new Error(`Hovedvinduet har felter til nøgler: ${found.join(', ')}`);
 }
 // Før første version viser preview-ruden kun en pladsholder, ikke startsiden. Testen skriver selv en første version
 // (startsiden med en ændret etiket, så overskrift og logo bevares) og venter på, at den vises.
@@ -125,4 +160,4 @@ async function firstVersion(page, projectDir, title) {
   await fs.writeFile(index, (await fs.readFile(index, 'utf8')).replace('HER BEGYNDER DIN IDÉ', 'FØRSTE VERSION'));
   await page.frameLocator('#preview').locator('h1').filter({ hasText: title }).waitFor({ timeout: 15000 });
 }
-module.exports = { firstVersion, openSetup, addConnection, enableSharing, skipIntroduction, toOnboarding, menuClick, taskOptions, closeTaskOptions, selectMode, previewOptions, projectOptions, isolateDocuments, chooseLocation, openExistingProject, forbidGitWrites, assertNoGitWrites };
+module.exports = { firstVersion, openSetup, addConnection, chooseProviderCard, keyWindow, enterCredential, assertNoKeyFields, enableSharing, skipIntroduction, toOnboarding, menuClick, taskOptions, closeTaskOptions, selectMode, previewOptions, projectOptions, isolateDocuments, chooseLocation, openExistingProject, forbidGitWrites, assertNoGitWrites };

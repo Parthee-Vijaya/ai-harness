@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Indtast nøgle</title>
+<link rel="stylesheet" href="styles.css">
+<script src="key-window.js" defer></script>
+</head>
+<body class="key-window">
+<main>
+<div class="key-window-head"><img id="key-logo" alt="" width="28" height="28" hidden><h1 id="key-heading" tabindex="-1">Indtast din nøgle</h1></div>
+<p id="key-recipient" class="hint"></p>
+<p id="key-warning" class="key-window-warning" hidden></p>
+<form id="key-form">
+<label for="key-value" id="key-label">API-nøgle</label>
+<input id="key-value" type="password" autocomplete="off" spellcheck="false" autocapitalize="off" autocorrect="off" required>
+<p id="key-status" class="hint" role="status"></p>
+<div id="key-error" class="key-window-error" role="alert" hidden><p id="key-error-text"></p><details id="key-details" hidden><summary>Se detaljer</summary><pre id="key-details-text"></pre></details></div>
+<div class="key-window-actions"><button type="button" id="key-help" class="text-button" hidden>Har du ikke en nøgle?</button><span><button type="button" id="key-cancel">Annuller</button><button type="button" id="key-save-anyway" hidden>Gem alligevel</button><button type="submit" id="key-submit" class="primary">Kontrollér og gem</button></span></div>
+</form>
+</main>
+</body>
+</html>

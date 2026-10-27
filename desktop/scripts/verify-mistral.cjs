@@ -68,8 +68,8 @@ async function main() {
     await helpers.skipIntroduction(page);
     await app.evaluate(({ dialog }, folder) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [folder] }); }, project);
     await page.click('#open'); await page.waitForSelector('#workspace:not([hidden])');
-    await helpers.openSetup(page); await page.click('#setup-add-provider'); await page.click('#provider-cards [data-kind="mistral"]');
-    await page.fill('#api-key', key); await page.click('#save-connection');
+    await helpers.openSetup(page); await page.click('#setup-add-provider'); await helpers.chooseProviderCard(page, 'mistral');
+    await page.click('#enter-key'); await helpers.enterCredential(app, key);
     await page.waitForFunction(() => document.querySelector('#setup').dataset.step === 'saved' && !document.querySelector('#setup-continue').disabled);
     await page.click('#setup-continue'); await page.waitForSelector('#workspace:not([hidden])');
     await page.waitForFunction(() => document.querySelector('#model-select').value === 'mistral-medium-latest');

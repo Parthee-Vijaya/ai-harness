@@ -8,13 +8,13 @@ Aura skal kunne bruges af en person uden teknisk baggrund, som klikker sig igenn
 
 - **Ét spørgsmål pr. skærm.** Overskriften er spørgsmålet, fx "Hvilket kodeværktøj bruger du?".
 - **Få, store valg.** Ét eller to hovedvalg, højst tre til fire synlige. Når vi anbefaler et valg, står det først og er markeret som anbefalet. Spørger vi om noget, brugeren allerede har, fx sit kodeværktøj, vises de mest udbredte først.
-- **Resten bag ét link.** Fx "Et andet værktøj". Lange lister får søgning. Udbyderoversigten har sin egen undtagelse nedenfor.
+- **Resten bag ét link.** Fx "Et andet værktøj" eller "Bruger du en anden udbyder? Vælg en anden". Lange lister får søgning.
 - **Et klik fører videre,** når valget er entydigt. Der skal ikke også trykkes Næste.
 - **Resumé først, detaljer bagefter.** Sig i almindeligt dansk, hvad der sker. Filstier, modelnavne med versionsnumre, priser pr. token og konfiguration ligger bag "Se detaljer".
 - **Knappen siger, hvad der sker.** Skriv "Installer resten" frem for et afkrydsningsfelt og en generel knap.
 - **Én næste handling.** Når noget er færdigt, vises det vigtigste næste skridt; andre handlinger er sekundære.
 
-Eksempler i appen: AI-adgang har to store valg. Udbyderoversigten er en udtrykkeligt valgt undtagelse fra grænsen på fire valg: alle ni udbydere har lige store kort med et lille logo og forbindelsesstatus. Ingen udbyder eller model anbefales. Kun det valgte kort åbner en formular. Modellen er udbyderens eget udgangspunkt, valgt på forhånd; modelknappen viser det, to alternativer og "Alle modeller". En filgodkendelse viser Tillad én gang, Tillad altid i projektet og Afvis; tilladelse til resten af opgaven ligger under Flere valg. Funktioner ved første start har to kort, Hele pakken (anbefalet) og Vælg selv. Kodeværktøj har fire kort og "Et andet værktøj".
+Eksempler i appen: AI-adgang har to store valg. Udbyderoversigten viser fire lige store kort med et lille logo og forbindelsesstatus, Claude, Mistral, Corti og Alexandra, og resten ligger bag "Bruger du en anden udbyder? Vælg en anden". Ingen udbyder eller model anbefales. Kun det valgte kort åbner en formular. Modellen er udbyderens eget udgangspunkt, valgt på forhånd; modelknappen viser det, to alternativer og "Alle modeller". En filgodkendelse viser Tillad én gang, Tillad altid i projektet og Afvis; tilladelse til resten af opgaven ligger under Flere valg. Funktioner ved første start har to kort, Hele pakken (anbefalet) og Vælg selv. Kodeværktøj har fire kort og "Et andet værktøj".
 
 Tæl de synlige valg, før en skærm kaldes færdig, og gennemfør forløbet i appen.
 
@@ -23,7 +23,7 @@ Dialogens tilgængelige navn skal bruge den overskrift, der faktisk vises i det 
 ## Det, man møder
 
 - Første skærm spørger, om man vil bygge i appen eller bruge Aura Harness i sit eget kodeværktøj.
-- Den guidede opstart viser ét spørgsmål ad gangen med stor overskrift og to eller tre store valg. Først vælger man adgangsnøgle eller AI på computeren; en gemt forbindelse bliver et tredje valg. Adgangsnøgle fører til fire udbyderkort, Claude, Mistral, Corti og Alexandra, og "Bruger du en anden udbyder? Vælg en anden". Nøglefeltet vises først, når en udbyder er valgt. "Har du ikke en nøgle? Sådan får du en" viser konto, betaling, månedlig grænse og nøgle som nummererede trin med en knap til hver side hos udbyderen. Sidepanelet er skjult under introduktionen.
+- Den guidede opstart viser ét spørgsmål ad gangen med stor overskrift og to eller tre store valg. Først vælger man adgangsnøgle eller AI på computeren; en gemt forbindelse bliver et tredje valg. Adgangsnøgle fører til fire udbyderkort, Claude, Mistral, Corti og Alexandra, og "Bruger du en anden udbyder? Vælg en anden". **Indtast nøgle** vises først, når en udbyder er valgt. Nøglen skrives i et eget vindue, aldrig i hovedvinduet; formularen viser kun, om der er gemt en nøgle. Ollama og Egen server har også **Gem uden nøgle**, og en gemt forbindelse har **Indtast ny nøgle**. "Har du ikke en nøgle? Sådan får du en" viser konto, betaling, månedlig grænse og nøgle som nummererede trin med en knap til hver side hos udbyderen. Sidepanelet er skjult under introduktionen.
 - Efter AI-trinnet spørger den guidede opstart én gang: "Hvad skal Aura hjælpe med?".
   - Der er to store valg. Hele pakken står først og er markeret Anbefalet; det andet er Vælg selv.
   - Vælg selv viser de seks funktioner som kontakter, der starter slået fra. Knappen siger, hvad der sker, fx "Fortsæt med 2 funktioner".
@@ -42,7 +42,7 @@ Dialogens tilgængelige navn skal bruge den overskrift, der faktisk vises i det 
 - Næste trin viser kun det valgte forløb. Nøglehjælp og tekniske oplysninger er foldet sammen. GitHub og lokale værktøjer ligger under Avanceret opsætning. Tilbage og Vælg senere er altid tilgængelige.
 - Sidepanelet indeholder projekter, Nyt projekt, Åbn projekt, Søg i samtaler og Indstillinger. Den installerede version står med lille tekst under navnet. Søgningen sker kun i de gemte samtaler på computeren, og et træf åbner beskeden uden at sende den til AI'en. Indstillinger har AI-forbindelser, Funktioner, Opdateringer og Hjælp og feedback.
 - Opdateringer viser version og status med én næste handling: Søg, Hent eller Genstart og opdatér. Automatisk søgning kan slås fra under Indstillinger i dialogen. En ny version vises med en diskret linje over arbejdsområdet. En kritisk rettelse giver en vedvarende advarsel, men blokerer ikke arbejdet. Genstart venter på igangværende opgaver og gemmer kladden først.
-- AI-forbindelser er en liste med Rediger på hver forbindelse. Tilføj forbindelse går gennem den guidede opsætning med de tre udbyderkort. Rediger viser formularen med Test forbindelse og Fjern forbindelse.
+- AI-forbindelser er en liste med Rediger på hver forbindelse. Tilføj forbindelse går gennem den guidede opsætning med de fire udbyderkort. Rediger viser formularen med Kontrollér adgang og Fjern forbindelse.
 - Arbejdsområdet består af samtalen og en arbejdsflade med en flytbar skillelinje. Arbejdsfladen har fem faner: Forhåndsvisning, Plan, Ændringer, Kode og Aktivitet. Forhåndsvisning er udgangspunktet.
   - Kun brugeren skifter fane. AI'ens hændelser giver Ændringer et tal og Aktivitet en prik, men flytter ikke brugeren. Nyt indhold i en åben fane vises først, når brugeren vælger det, fx med Vis dem.
   - Faneskift bevarer previewets formularer og rulning, filvalget, rulningen i de andre faner og beskedkladden.

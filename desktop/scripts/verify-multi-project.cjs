@@ -103,7 +103,7 @@ const helpers = require('./ui-test-helpers.cjs');
     });
     page = await app.firstWindow(); page.on('pageerror', error => errors.push(error.message));
     await helpers.skipIntroduction(page); page.setDefaultTimeout(90000); await helpers.enableSharing(page);
-    const connection = await helpers.addConnection(page, { name: 'Tre kontrollerede modeller', baseURL: `http://127.0.0.1:${server.address().port}/v1`, apiKey: 'syntetisk-før' });
+    const connection = await helpers.addConnection(page, { name: 'Tre kontrollerede modeller', baseURL: `http://127.0.0.1:${server.address().port}/v1`, apiKey: 'syntetisk-noegle-foer-opgaven', app });
     await page.evaluate(() => { window.multiProjectEvents = []; window.harness.onEvent(event => window.multiProjectEvents.push(event)); });
     for (const project of projects) {
       await helpers.openExistingProject(app, page, project.root); await helpers.taskOptions(page);
@@ -128,7 +128,10 @@ const helpers = require('./ui-test-helpers.cjs');
     await page.screenshot({ path: path.join(root, 'udgiv-under-arbejde.png'), animations: 'disabled' });
     await page.click('[data-close="deployment-dialog"]');
     await helpers.previewOptions(page); assert.equal(await page.locator('#attach-preview').isEnabled(), true); await page.keyboard.press('Escape');
-    await call('saveConnection', { id: connection.id, kind: 'compatible', name: 'Ny nøgle til næste opgave', baseURL: connection.baseURL, apiKey: 'syntetisk-efter' });
+    await call('saveConnection', { id: connection.id, kind: 'compatible', name: 'Nyt navn til næste opgave', baseURL: connection.baseURL });
+    // Hovedvinduet kan ikke sende en nøgle, heller ikke under arbejdet. Den indtastes i nøglevinduet.
+    const withKey = await page.evaluate(value => window.harness.saveConnection(value), { id: connection.id, kind: 'compatible', name: 'Nyt navn til næste opgave', baseURL: connection.baseURL, apiKey: 'syntetisk-efter' });
+    assert.equal(withKey.ok, false); assert.match(withKey.error, /nøglevinduet/);
     const removed = await page.evaluate(id => window.harness.removeConnection(id), connection.id); assert.equal(removed.ok, false); assert.match(removed.error, /bruges af en opgave/);
     check('Indstillinger, Udgiv og preview kan åbnes under arbejdet; forbindelse kan ændres, men ikke fjernes i brug');
     for (const project of projects) {

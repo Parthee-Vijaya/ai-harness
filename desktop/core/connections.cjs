@@ -11,7 +11,7 @@ const definitions = {
   // Vilkår for de tre udbydere i opsætningen er kontrolleret hos udbyderne 29. september 2026. De korte tekster vises i resuméet før afsendelse.
   corti: { name: 'Corti S1 · EU', provider: 'Corti', baseURL: 'https://ai.eu.corti.app/v1', protocol: 'openai', keyRequired: true, source: 'https://docs.corti.ai/models/regions', checkedAt: '2026-09-29',
     training: 'Corti oplyser, at data i EU-projekter aldrig bruges til træning. Kontrollér aftalen for jeres projekt.', trainingShort: 'Bruges ikke til træning, ifølge Corti',
-    region: 'EU ifølge Cortis dokumentation: EU-projekter kører på Cortis egen klynge i EU. Denne adapter bruger kun EU-endpointet; den konkrete installation er ikke uafhængigt verificeret.', regionShort: 'EU, på Cortis egne servere',
+    region: 'EU ifølge Cortis dokumentation: EU-projekter kører på Cortis egen klynge i EU. Appen bruger adressen fra nøglens miljø, EU, EU-S eller Frankrig; den konkrete installation er ikke uafhængigt verificeret.', regionShort: 'EU, på Cortis egne servere',
     retention: 'Corti oplyser, at prompts og svar i EU-projekter aldrig gemmes eller logges.', retentionShort: 'Gemmes ikke, ifølge Corti' },
   // Vilkårene for Alexandra er kontrolleret på platformens egen dokumentation 21. oktober 2026.
   alexandra: { name: 'Alexandra AI Platform', provider: 'Alexandra Instituttet', baseURL: 'https://inference.alexandra.dk/v1', protocol: 'openai', keyRequired: true, source: 'https://platform.alexandra.dk/privacy/', checkedAt: '2026-10-21',
@@ -92,16 +92,68 @@ function cortiEndpoint(key) {
   if (CORTI[environment]) return CORTI[environment];
   throw new Error(environment === 'us' ? 'Nøglen hører til Cortis amerikanske miljø. Aura bruger kun Corti i EU og Frankrig.' : `Nøglen hører til Cortis miljø "${environment}", som Aura endnu ikke bruger. Brug en nøgle fra et projekt i EU, EU-S eller Frankrig.`);
 }
+// Navnet på en Corti-forbindelse følger nøglens miljø, så en EU-S-nøgle ikke står som EU.
+function cortiName(baseURL) { return `Corti S1 · ${baseURL === CORTI.fr ? 'Frankrig' : baseURL === CORTI['eu-s'] ? 'EU-S' : 'EU'}`; }
 function assertSupported(connection) {
   if (connection?.kind === 'komplai') throw new Error('komplai bruges nu kun til udgivelse via Udgiv. Vælg en anden AI-forbindelse.');
   if (!connection || !Object.hasOwn(definitions, connection.kind)) throw new Error('Vælg en understøttet forbindelsestype.');
 }
+// Indsatte nøgler har ofte mellemrum, usynlige tegn, anførselstegn eller et navn foran fra en .env-fil eller en
+// Authorization-linje. Rensningen fjerner dem og siger, hvad der er rettet. Ingen fejlbesked gentager nøglen.
+const INVISIBLE = /[­؜᠎​-‏‪-‮⁠-⁤⁦-⁩﻿]/g;
+const QUOTED = /^(["'`“”„‘’«»‹›])([\s\S]+)(["'`“”„‘’«»‹›])$/;
+const keyError = message => Object.assign(new Error(message), { reason: 'invalid' });
+/**
+ * Den fælles rensning til kontrol og lagring. strict bruges ved indtastning og afviser alt uden for synlig ASCII, som
+ * rigtige nøgler består af. Uden strict afvises kun tegn, der ikke kan sendes i en HTTP-header.
+ */
+function cleanKey(raw, kind, { strict = false } = {}) {
+  if (typeof raw !== 'string' || raw.length > 4096) throw keyError('Nøglen er ugyldig eller for lang.');
+  const changes = new Set();
+  let key = raw;
+  const strip = (pattern, change) => { const next = key.replace(pattern, ''); if (next !== key) { changes.add(change); key = next; } };
+  strip(INVISIBLE, 'usynlige tegn');
+  // Flere lag på hinanden, fx export CORTI_API_KEY="…" eller Authorization: Bearer ….
+  for (let round = 0; round < 3; round++) {
+    strip(/^[\s ]+|[\s ]+$/g, 'mellemrum');
+    strip(/^authorization\s*:\s*/i, 'Authorization foran');
+    // Kun navne som i en .env-fil, fx CORTI_API_KEY=. En base64-nøgle med = til sidst rammes ikke.
+    strip(/^(?:export\s+)?[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\s*=\s*/, 'navn foran');
+    strip(/^bearer\s+/i, 'Bearer foran');
+    const quoted = QUOTED.exec(key);
+    if (quoted) { key = quoted[2]; changes.add('anførselstegn'); }
+  }
+  if (!key) throw keyError('Feltet er tomt. Sæt nøglen ind fra udbyderens side.');
+  if (/\s/.test(key)) throw keyError('Nøglen har mellemrum inde i sig. Kopiér den igen med kopiér-knappen hos udbyderen.');
+  if (strict ? /[^\x21-\x7e]/.test(key) : /[\x00-\x1f\x7f]|[^\x00-\xff]/.test(key)) throw keyError('Nøglen indeholder tegn, der ikke hører til en API-nøgle, fx typografiske tegn. Kopiér den igen med kopiér-knappen hos udbyderen.');
+  // Cortis nøgler er base64. Mangler et = til sidst, tilføjes det; en nøgle, der ikke kan være base64, er afkortet.
+  if (kind === 'corti' && /^[A-Za-z0-9+/]+=*$/.test(key)) {
+    const body = key.replace(/=+$/, '');
+    if (body.length % 4 === 1) throw keyError('Nøglen ser afkortet ud. Brug kopiér-knappen i Corti Console.');
+    const padded = body + '='.repeat((4 - body.length % 4) % 4);
+    if (padded !== key) { changes.add(padded.length > key.length ? 'manglende = til sidst' : 'for mange = til sidst'); key = padded; }
+  }
+  if (kind !== 'github' && /^(gh[pousr]_|github_pat_)/.test(key)) throw keyError('Det ligner en GitHub-nøgle. Brug en API-nøgle fra AI-udbyderen.');
+  if (kind === 'github' && /^sk-/.test(key)) throw keyError('Det ligner en API-nøgle til en AI-udbyder. Brug en GitHub-nøgle, der begynder med github_pat_ eller ghp_.');
+  if (strict && (kind === 'github' || definitions[kind]?.keyRequired) && key.length < 20) throw keyError('Nøglen ser afkortet ud. Brug kopiér-knappen hos udbyderen.');
+  return { key, changes: [...changes] };
+}
+// Udbydernes egne sider til konto og nøgler. Nøglevinduet bruger dem til "Har du ikke en nøgle?".
+const accountPages = {
+  openai: { start: 'https://platform.openai.com/', keys: 'https://platform.openai.com/api-keys' },
+  azure: { start: 'https://ai.azure.com/' },
+  anthropic: { start: 'https://platform.claude.com/', billing: 'https://platform.claude.com/settings/billing', keys: 'https://platform.claude.com/settings/keys' },
+  mistral: { start: 'https://console.mistral.ai/', billing: 'https://admin.mistral.ai/organization/billing', privacy: 'https://admin.mistral.ai/plateforme/privacy', keys: 'https://console.mistral.ai/api-keys' },
+  corti: { start: 'https://console.corti.app/signup', console: 'https://console.corti.app/', keys: 'https://console.corti.app/corti-models' },
+  alexandra: { start: 'https://platform.alexandra.dk/platform-ui/register', keys: 'https://platform.alexandra.dk/platform-ui/keys', billing: 'https://platform.alexandra.dk/platform-ui/billing', usage: 'https://platform.alexandra.dk/platform-ui/usage' },
+  openrouter: { start: 'https://openrouter.ai/settings/keys' }, zen: { start: 'https://opencode.ai/auth' }
+};
 function normalize(input) {
   assertSupported(input);
   const def = definitions[input.kind];
-  const baseURL = input.kind === 'azure' ? azureEndpoint(input.baseURL) : endpoint(['compatible', 'ollama'].includes(input.kind) ? input.baseURL : input.kind === 'corti' && input.apiKey ? cortiEndpoint(input.apiKey) : def.baseURL);
+  const key = input.apiKey ? cleanKey(input.apiKey, input.kind).key : '';
+  const baseURL = input.kind === 'azure' ? azureEndpoint(input.baseURL) : endpoint(['compatible', 'ollama'].includes(input.kind) ? input.baseURL : input.kind === 'corti' && key ? cortiEndpoint(key) : def.baseURL);
   if (typeof input.name !== 'string' || !input.name.trim() || input.name.length > 100) throw new Error('Angiv et forbindelsesnavn på højst 100 tegn.');
-  if (input.apiKey && (typeof input.apiKey !== 'string' || input.apiKey.length > 4096 || /[\r\n]/.test(input.apiKey))) throw new Error('API-nøglen er ugyldig.');
   const extra = {};
   if (input.kind === 'azure') {
     if (typeof input.deployment !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(input.deployment.trim())) throw new Error('Angiv deployment-navnet fra Azure. Brug bogstaver, tal, punktum, bindestreg eller understregning.');
@@ -116,16 +168,60 @@ function azureEndpoint(value) {
   return `${url.origin}/openai/v1`;
 }
 function usesResponses(connection) { return (connection.protocol || definitions[connection.kind]?.protocol) === 'responses'; }
+// Fjerner nøgler og nøglelignende tekst fra et svar, før det vises bag Se detaljer.
+function redact(text, keys = []) {
+  let out = String(text).replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '');
+  for (const key of keys) if (typeof key === 'string' && key.length >= 6) out = out.split(key).join('••••');
+  out = out.replace(/\b(sk-[A-Za-z0-9_-]{8,}|gh[pousr]_[A-Za-z0-9]{12,}|github_pat_[A-Za-z0-9_]{12,})/g, '••••').replace(/\b(bearer|api-key|x-api-key)(["']?\s*[:=]?\s*["']?)[^\s"',}]+/gi, '$1$2••••').replace(/[A-Za-z0-9+/_=-]{40,}/g, '••••');
+  return out.length > 600 ? out.slice(0, 600) + ' …' : out;
+}
+// Kendte afvisninger fra udbydernes svar, oversat til dansk. Selve svaret står bag Se detaljer.
+const providerReasons = [
+  [/not valid base64|invalid base64/i, 'Udbyderen siger, at nøglen ikke er gyldig base64. Den er måske afkortet; brug kopiér-knappen hos udbyderen.'],
+  [/invalid[ _-]?(api[ _-]?)?key|incorrect api key|invalid x-api-key|api key (is )?(invalid|not valid)|unauthorized/i, 'Udbyderen genkender ikke nøglen.'],
+  [/insufficient[ _-]?quota|credit balance|billing|payment required/i, 'Kontoen har ikke kredit eller kvote tilbage hos udbyderen.'],
+  [/rate[ _-]?limit|too many requests/i, 'Udbyderen får for mange forespørgsler lige nu. Vent lidt, og prøv igen.'],
+  [/permission|forbidden|not allowed|access denied/i, 'Nøglen har ikke adgang til modellerne. Kontrollér nøglens tilladelser hos udbyderen.']
+];
+// En fejl har en grund: unreachable og timeout betyder, at serveren ikke kunne nås, rejected at den afviste nøglen.
+const failure = (message, reason, details = '') => Object.assign(new Error(message), { reason, details });
+function networkFailure(error) {
+  const code = error?.cause?.code || error?.code || '', name = error?.name || '';
+  if (name === 'TimeoutError' || name === 'AbortError' || /TIMEOUT/.test(code)) return failure('Serveren svarede ikke inden for 15 sekunder. Kontrollér adresse, netværk og eventuelt Tailscale.', 'timeout', code || name);
+  if (/redirect/i.test(String(error?.cause?.message || error?.message))) return failure('Serveren sendte appen videre til en anden adresse. Aura følger ikke en omdirigering med en nøgle. Brug den adresse, udbyderen oplyser.', 'rejected', 'omdirigering');
+  if (/CERT|SELF_SIGNED|UNABLE_TO_VERIFY/.test(code)) return failure('Serverens certifikat kunne ikke godkendes. Kontrollér adressen.', 'unreachable', code);
+  // Undici skriver headerens værdi i sin fejltekst. Den tekst vises derfor aldrig.
+  if (/INVALID_ARG/.test(code) || /header/i.test(`${error?.message} ${error?.cause?.message || ''}`)) return failure('Nøglen indeholder tegn, der ikke kan sendes. Kopiér den igen med kopiér-knappen hos udbyderen.', 'invalid');
+  return failure('Serveren svarer ikke. Kontrollér adresse, port, netværk og eventuelt Tailscale.', 'unreachable', code);
+}
+async function readExcerpt(response) {
+  try {
+    const reader = response.body?.getReader(); if (!reader) return '';
+    const chunks = []; let size = 0;
+    while (size < 4096) { const { done, value } = await reader.read(); if (done) break; chunks.push(value); size += value.length; }
+    await reader.cancel().catch(() => {});
+    return Buffer.concat(chunks).toString('utf8').slice(0, 4096);
+  } catch { return ''; }
+}
 async function requestJSON(url, { key = '', kind, method = 'GET', body, signal } = {}) {
   const headers = { accept: 'application/json' };
   if (key) Object.assign(headers, kind === 'anthropic' ? { 'x-api-key': key, 'anthropic-version': '2023-06-01' } : kind === 'azure' ? { 'api-key': key } : { Authorization: `Bearer ${key}` });
   if (body) headers['content-type'] = 'application/json';
   let response;
   try { response = await fetch(url, { method, headers, body: body && JSON.stringify(body), signal: signal || AbortSignal.timeout(15000), redirect: 'error' }); }
-  catch { throw new Error('Serveren svarer ikke. Kontrollér adresse, port, netværk og eventuelt Tailscale.'); }
-  // En Corti-nøgle virker kun i sit eget miljø. Beskeden siger, hvilken adresse appen prøvede, så testeren ved, hvad der skal tjekkes.
-  if (!response.ok && kind === 'corti' && (response.status === 401 || response.status === 403)) throw new Error(`Corti afviste nøglen på ${url.startsWith(CORTI.fr) ? 'adressen i Frankrig' : url.startsWith(CORTI['eu-s']) ? 'adressen i EU-S (Sovereign)' : 'adressen i EU'}. Brug en nøgle fra Corti Models i et projekt i EU, EU-S eller Frankrig; en nøgle virker kun i sit eget miljø.`);
-  if (!response.ok) throw new Error(response.status === 401 || response.status === 403 ? 'Serveren afviste adgangen. Kontrollér API-nøglen og tilladelserne.' : `Serveren svarede med HTTP ${response.status}. Ingen anden forbindelse blev valgt.`);
+  catch (error) { throw networkFailure(error); }
+  if (!response.ok) {
+    const excerpt = await readExcerpt(response);
+    let said = excerpt; try { const data = JSON.parse(excerpt); said = data?.error?.message || data?.error || data?.message || data?.detail || excerpt; } catch { /* Svaret er ikke JSON. */ }
+    if (typeof said !== 'string') said = JSON.stringify(said);
+    const known = providerReasons.find(([pattern]) => pattern.test(said))?.[1];
+    const details = redact(`HTTP ${response.status}${said ? ': ' + said : ''}`, [key]);
+    // En Corti-nøgle virker kun i sit eget miljø. Beskeden siger, hvilken adresse appen prøvede, så testeren ved, hvad der skal tjekkes.
+    if (kind === 'corti' && (response.status === 401 || response.status === 403)) throw failure(`Corti afviste nøglen på ${url.startsWith(CORTI.fr) ? 'adressen i Frankrig' : url.startsWith(CORTI['eu-s']) ? 'adressen i EU-S (Sovereign)' : 'adressen i EU'}. ${known ? known + ' ' : ''}Brug en nøgle fra Corti Models i et projekt i EU, EU-S eller Frankrig; en nøgle virker kun i sit eget miljø.`, 'rejected', details);
+    if (response.status === 401 || response.status === 403) throw failure(`Serveren afviste adgangen. ${known || 'Kontrollér API-nøglen og tilladelserne.'}`, 'rejected', details);
+    if (response.status === 429 || response.status === 402) throw failure(known || `Udbyderen svarede med HTTP ${response.status}. Prøv igen senere.`, 'rejected', details);
+    throw failure(`Serveren svarede med HTTP ${response.status}. ${known ? known + ' ' : ''}Ingen anden forbindelse blev valgt.`, response.status >= 500 ? 'server' : 'rejected', details);
+  }
   const chunks = []; let size = 0;
   for await (const chunk of response.body) {
     size += chunk.length;
@@ -261,4 +357,4 @@ function engineProvider(connection, model, gatewayURL, token) {
     options: { baseURL: gatewayURL, apiKey: token },
     models: { [model.id]: { name: model.name, tool_call: true, limit: modelLimits(connection, model), ...(usesResponses(connection) ? { options: { store: false, include: ['reasoning.encrypted_content'] } } : {}) } } };
 }
-module.exports = { definitions, assertSupported, endpoint, normalize, requestJSON, listModels, routes, disclosure, engineProvider, modelLimits, effortLevels, reasons, priceFor, usesResponses, OUTPUT_CEILING, WORKING_WINDOW };
+module.exports = { definitions, accountPages, assertSupported, endpoint, normalize, cleanKey, redact, cortiName, requestJSON, listModels, routes, disclosure, engineProvider, modelLimits, effortLevels, reasons, priceFor, usesResponses, OUTPUT_CEILING, WORKING_WINDOW };

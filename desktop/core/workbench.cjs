@@ -218,7 +218,10 @@ class Workbench {
   }
 
   // ---------- Forbindelser og modeller ----------
-  async saveConnection(input) {
+  async saveConnection(input, options) { await this.storeConnection(input, options); return this.state(); }
+  // Gemmer forbindelsen og returnerer dens id. Er nøglen lige kontrolleret, gemmes kataloget fra kontrollen, så den ikke
+  // hentes en gang til.
+  async storeConnection(input, { catalog = null } = {}) {
     if (input?.kind === 'komplai' || (input?.id && (await this.connection(input.id)).kind === 'komplai')) throw new Error('komplai bruges nu kun til udgivelse via Udgiv. Vælg en anden AI-forbindelse.');
     const connection = connections.normalize(input);
     connection.revision = crypto.randomUUID();
@@ -227,11 +230,12 @@ class Workbench {
       if (input.id && !previous) throw new Error('Forbindelsen findes ikke.');
       // En Corti-nøgle hører til sit eget miljø. Uden ny nøgle beholder forbindelsen adressen fra den gemte nøgle.
       if (connection.kind === 'corti' && !input.apiKey && !input.clearKey && previous?.kind === 'corti') connection.baseURL = previous.baseURL;
-      connection.secret = input.apiKey ? this.store.encrypt(input.apiKey) : (input.clearKey || previous?.kind !== connection.kind || previous?.baseURL !== connection.baseURL ? undefined : previous?.secret);
+      connection.secret = input.apiKey ? this.store.encrypt(connections.cleanKey(input.apiKey, connection.kind).key) : (input.clearKey || previous?.kind !== connection.kind || previous?.baseURL !== connection.baseURL ? undefined : previous?.secret);
       state.connections = [...state.connections.filter(c => c.id !== connection.id), connection];
     });
     await this.invalidateConnection(connection.id);
-    return this.state();
+    if (Array.isArray(catalog)) this.catalogs.set(connection.id, catalog);
+    return connection.id;
   }
   async removeConnection(id) {
     this.assertConnectionIdle(id);

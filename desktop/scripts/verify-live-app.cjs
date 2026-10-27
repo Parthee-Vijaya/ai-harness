@@ -142,12 +142,13 @@ async function main() {
     await page.evaluate(() => window.harness.onEvent(event => window.liveDemoEvent(event)));
     if (controlled) {
       await helpers.skipIntroduction(page);
-      await helpers.addConnection(page, { name: 'Kontrolleret lokal prøve', baseURL: `http://127.0.0.1:${server.address().port}/v1`, apiKey: 'syntetisk-noegle' });
+      await helpers.addConnection(page, { name: 'Kontrolleret lokal prøve', baseURL: `http://127.0.0.1:${server.address().port}/v1`, apiKey: 'syntetisk-noegle', app });
     } else {
       await page.click('#path-app'); await page.click('#welcome-build'); await page.click('#setup-add-provider');
-      await page.click(`#provider-cards [data-kind="${provider}"]`); await page.locator('.key-guide > summary').click();
-      // Intet skærmbillede eller DOM-udtræk af feltet, mens nøglen tastes.
-      note(`KLAR TIL NØGLE: Indtast ${provider}-nøglen direkte i dette Aura-vindue, og klik Gem og kontrollér. Ingen nøgle i chat eller terminal.`);
+      await helpers.chooseProviderCard(page, provider); await page.locator('.key-guide > summary').click();
+      await page.click('#enter-key');
+      // Intet skærmbillede eller DOM-udtræk af vinduet, mens nøglen tastes. Nøglen skrives kun i nøglevinduet.
+      note(`KLAR TIL NØGLE: Indtast ${provider}-nøglen i nøglevinduet, der er åbnet, og klik Kontrollér og gem. Ingen nøgle i chat eller terminal.`);
       await page.waitForFunction(() => !document.querySelector('#setup-continue').hidden && !document.querySelector('#setup-continue').disabled, null, { timeout: 30 * 60000, polling: 1000 });
       await page.click('#setup-continue'); await page.click('#features-all');
     }

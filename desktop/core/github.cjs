@@ -29,7 +29,7 @@ class GitHub {
     return { connected: Boolean(saved?.secret), login: saved?.login || '', expiresAt: saved?.expiresAt || null, expired: Boolean(saved?.expiresAt && saved.expiresAt <= this.now()), browserLogin: Boolean(this.clientID) };
   }
   async saveToken(token, expiresAt = null, generation = this.generation) {
-    if (typeof token !== 'string' || !/^[A-Za-z0-9_\-]{10,500}$/.test(token)) throw new Error('Indtast et gyldigt GitHub-token i nøglefeltet.');
+    if (typeof token !== 'string' || !/^[A-Za-z0-9_\-]{10,500}$/.test(token)) throw new Error('Indtast et gyldigt GitHub-token i nøglevinduet.');
     const user = await this.request('https://api.github.com/user', { token }); name(user.login);
     const secret = this.store.encrypt(token);
     await this.store.update(state => { if (generation !== this.generation) throw new Error('Login blev annulleret.'); state.hosting = { ...state.hosting, github: { login: user.login, secret, expiresAt } }; });

@@ -17,7 +17,7 @@
     $('#hosting-auth').hidden = state.connected && !state.expired;
     // Uden et registreret GitHub-login i denne version vises knappen ikke; en deaktiveret knap er en blindgyde.
     $('#hosting-login').disabled = !state.browserLogin; $('#hosting-login').hidden = !state.browserLogin;
-    $('#hosting-login-help').textContent = state.browserLogin ? 'Du godkender adgangen hos GitHub. Appen modtager ikke din GitHub-adgangskode.' : 'Login med GitHub i browseren er ikke slået til i denne version. Under Avanceret kan du forbinde med et GitHub-token.';
+    $('#hosting-login-help').textContent = state.browserLogin ? 'Du godkender adgangen hos GitHub. Appen modtager ikke din GitHub-adgangskode.' : 'Login med GitHub i browseren er ikke slået til i denne version. Under Avanceret kan du forbinde med en GitHub-nøgle.';
     $('#hosting-disconnect').disabled = !state.connected; $('#hosting-account').hidden = !state.connected;
     $('#hosting-catalog').disabled = !state.connected;
     $('#hosting-project').hidden = !state.project || !state.connected;
@@ -39,11 +39,18 @@
   }
   const open = () => { creation = null; $('#hosting-create-confirm').hidden = true; $('#hosting-technical').open = false; $('#hosting-account').open = false; $('#hosting-dialog').showModal(); invalidate(); act(refresh); };
   $('#setup-hosting').onclick = open; $('#publish-button').onclick = open;
-  $('#hosting-dialog').addEventListener('close', () => { $('#hosting-token').value = ''; cancelLogin().catch(() => {}); });
+  $('#hosting-dialog').addEventListener('close', () => { cancelLogin().catch(() => {}); });
   $('#hosting-login').onclick = () => act(async () => { const value = await api('hostingLogin'); login = value.id; $('#hosting-code').textContent = value.code; $('#hosting-device').hidden = false; timer = setTimeout(() => poll(value.id), value.retryAfter); });
   $('#hosting-browser').onclick = () => act(() => api('hostingBrowser'));
   $('#hosting-cancel').onclick = () => act(cancelLogin);
-  $('#hosting-token-form').onsubmit = event => { event.preventDefault(); const token = $('#hosting-token').value; $('#hosting-token').value = ''; act(async () => { await cancelLogin(); await api('hostingToken', token); invalidate(); await refresh(); $('#hosting-feedback').textContent = 'Konto kontrolleret og adgang gemt krypteret.'; }); };
+  // Nøglen indtastes i nøglevinduet, som kontrollerer den hos GitHub og gemmer den. Her kommer kun kvitteringen.
+  $('#hosting-key').onclick = () => act(async () => {
+    await cancelLogin();
+    const receipt = await api('keyGithub', { target: 'backup' });
+    if (!receipt) { $('#hosting-feedback').textContent = 'Nøglen blev ikke indtastet. Adgangen er uændret.'; return; }
+    invalidate(); await refresh();
+    $('#hosting-feedback').textContent = 'Konto kontrolleret og adgang gemt krypteret.';
+  });
   $('#hosting-disconnect').onclick = () => act(async () => { await cancelLogin(); await api('hostingDisconnect'); invalidate(); $('#hosting-repositories').replaceChildren(); $('#hosting-owner').replaceChildren(); await refresh(); });
   $('#hosting-catalog').onclick = () => act(async () => {
     const result = await api('hostingCatalog');

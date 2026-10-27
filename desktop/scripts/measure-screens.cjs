@@ -88,8 +88,9 @@ const server = http.createServer(async (req, res) => {
     await click('#welcome-build'); await win.waitForSelector('#setup:not([hidden])'); await measure('ai-valg', '#setup', 'Opsætning: hvordan forbinder du AI');
     await click('#setup-add-provider'); await measure('udbydere', '#setup', 'Opsætning: udbyder');
     await click('#provider-cards [data-kind="anthropic"]'); await measure('noegle', '#setup', 'Opsætning: nøgle til Claude');
+    await measure('udbydere-flere', '#setup', 'Opsætning: udbyder');
     task = null; await win.locator('.key-guide > summary').click(); await measure('noeglehjaelp', '#setup', 'Opsætning: sådan får du en nøgle'); await win.locator('.key-guide > summary').click(); task = 'Forbind Claude med en nøgle';
-    await win.fill('#api-key', 'syntetisk-noegle-kun-til-maaling'); await click('#save-connection');
+    await click('#enter-key'); await helpers.enterCredential(app, 'syntetisk-noegle-kun-til-maaling-ascii');
     await win.locator('#setup-ai').filter({ hasText: /virker|svarer/ }).waitFor(); await measure('forbindelse', '#setup', 'Opsætning: forbindelsen virker');
     await click('#setup-continue'); task = null;
     await win.locator('#setup-title').filter({ hasText: 'Hvad skal Aura hjælpe med?' }).waitFor(); await measure('funktioner-start', '#setup', 'Første start: funktioner');

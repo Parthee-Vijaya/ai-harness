@@ -20,6 +20,9 @@ const { History, PreviewImages, kindOf } = require('./core/history.cjs');
 const { fileDetail } = require('./core/change-review.cjs');
 const { OwnTools } = require('./core/own-tools.cjs');
 const uiFiles = require('./core/ui-files.cjs');
+const connections = require('./core/connections.cjs');
+// Nøgler og GitHub-token indtastes kun i nøglevinduet. Hovedvinduet får en engangskvittering.
+const { KeyWindow, connectionPurpose, githubPurpose } = require('./core/key-window.cjs');
 
 // Appen hedder Aura. Datamappen og navnet i nøgleringen bevares fra før navneskiftet; se core/app-identity.cjs.
 const { appIdentity, rememberKeychain, projectParent, DISPLAY_NAME } = require('./core/app-identity.cjs');
@@ -30,7 +33,7 @@ app.setName(identity.keychainName);
 app.setPath('userData', identity.userData);
 app.setPath('sessionData', identity.sessionData);
 
-protocol.registerSchemesAsPrivileged(['harness', 'aura-preview'].map(scheme => ({ scheme, privileges: { standard: true, secure: true, supportFetchAPI: true } })));
+protocol.registerSchemesAsPrivileged([...['harness', 'aura-preview'].map(scheme => ({ scheme, privileges: { standard: true, secure: true, supportFetchAPI: true } })), KeyWindow.scheme()]);
 let window, chosenParent = null;
 let assets = [];
 let github, publishing, deployments, deploymentSetup, restoration, promtePreview, komplaiPreview;
@@ -98,7 +101,7 @@ function supportReport() {
   return require('./core/diagnostics.cjs').diagnostics({ version: app.getVersion(), platform: process.platform, arch: process.arch, packaged: app.isPackaged, versions: require('./core/runtime.cjs').get()?.versions, project: Boolean(currentProject()), running: workbench?.running, preview: currentSpace().devServer?.state, failures });
 }
 function shutdown() {
-  if (!shuttingDown) shuttingDown = (async () => { github?.cancel(); deploymentSetup?.promte.cancelAll(); await registry?.close(); await closeSpaces(); })().finally(() => { shuttingDown = null; });
+  if (!shuttingDown) shuttingDown = (async () => { keyWindow.close(); github?.cancel(); deploymentSetup?.promte.cancelAll(); await registry?.close(); await closeSpaces(); })().finally(() => { shuttingDown = null; });
   return shuttingDown;
 }
 const uiURL = 'harness://app/index.html';
@@ -147,9 +150,10 @@ handle('updates:notes', () => {
   if (!version || !/^\d+\.\d+\.\d+(?:-beta\.\d+)?$/.test(version)) throw new Error('Vælg en tilgængelig udgivelse.');
   return shell.openExternal(`https://github.com/ai-alliancen-org/ai-harness/releases/tag/v${version}`);
 });
-async function exclusive(action) {
+async function exclusive(action, forced) {
   const request = requests.getStore();
-  const category = request?.channel?.split(':')[0] || 'app';
+  // Nøglevinduet gemmer uden for hovedvinduets kald og siger derfor selv, hvilken kategori der låses.
+  const category = forced || request?.channel?.split(':')[0] || 'app';
   const key = ['project', 'assets', 'tools', 'connections', 'hosting', 'komplai'].includes(category) ? category : `${workspaceRoot() || 'app'}:${category}`;
   if (operations.has(key)) throw new Error('Denne handling er allerede i gang. Du kan fortsat bruge de andre projekter.');
   operations.add(key);
@@ -507,7 +511,6 @@ handle('git:automatic', value => exclusive(async () => {
 function hostingIdle() { /* Login og udgivelsesvalg ændrer ikke projektfiler. */ }
 async function sharingContext() { return { projectName: currentProject()?.name || '', viewingCopy: Boolean(currentChat()?.copy), copyCount: currentProject() ? (await workbench.chatList()).filter(chat => chat.isolated).length : 0 }; }
 handle('hosting:state', async () => ({ context: await sharingContext(), ...await github.state(), project: Boolean(currentProject()), publication: currentProject() ? await publishing.status(currentProject().root).catch(error => ({ message: error.message, selected: null })) : null }));
-handle('hosting:token', token => exclusive(async () => { hostingIdle(); publishing.reviews.clear(); return github.connectToken(token); }));
 handle('hosting:login', () => exclusive(async () => { hostingIdle(); return github.startLogin(); }));
 handle('hosting:poll', id => exclusive(async () => { hostingIdle(); publishing.reviews.clear(); return github.poll(id); }));
 handle('hosting:cancel', () => { github.cancel(); return true; });
@@ -553,15 +556,7 @@ handle('deployment:open', async kind => {
 });
 
 // Faste sider hos udbyderne til nøglevejledningen. Kontrolleret 29. september 2026. Andre adresser åbnes aldrig herfra.
-const accountPages = {
-  openai: { start: 'https://platform.openai.com/', keys: 'https://platform.openai.com/api-keys' },
-  azure: { start: 'https://ai.azure.com/' },
-  anthropic: { start: 'https://platform.claude.com/', billing: 'https://platform.claude.com/settings/billing', keys: 'https://platform.claude.com/settings/keys' },
-  mistral: { start: 'https://console.mistral.ai/', billing: 'https://admin.mistral.ai/organization/billing', privacy: 'https://admin.mistral.ai/plateforme/privacy', keys: 'https://console.mistral.ai/api-keys' },
-  corti: { start: 'https://console.corti.app/signup', console: 'https://console.corti.app/', keys: 'https://console.corti.app/corti-models' },
-  alexandra: { start: 'https://platform.alexandra.dk/platform-ui/register', keys: 'https://platform.alexandra.dk/platform-ui/keys', billing: 'https://platform.alexandra.dk/platform-ui/billing', usage: 'https://platform.alexandra.dk/platform-ui/usage' },
-  openrouter: { start: 'https://openrouter.ai/settings/keys' }, zen: { start: 'https://opencode.ai/auth' }
-};
+const accountPages = connections.accountPages;
 handle('connections:account', value => {
   const kind = typeof value === 'string' ? value : value?.kind, page = typeof value === 'string' ? 'start' : value?.page || 'start';
   if (!Object.hasOwn(accountPages, kind) || !Object.hasOwn(accountPages[kind], page)) throw new Error('Denne forbindelse opsættes hos din organisation eller på din egen server.');
@@ -591,7 +586,34 @@ handle('komplai:publish-overview', () => deployments.providers.komplai.overview(
 handle('komplai:publish-address', value => deployments.providers.komplai.address(value?.slug, value?.appId));
 handle('komplai:publish-disconnect', () => exclusive(() => require('./core/komplai.cjs').disconnectPublishing(workbench.store)));
 handle('connections:state', () => workbench.state(requestChatID()));
-handle('connections:save', value => exclusive(() => workbench.saveConnection(value)));
+handle('connections:save', value => exclusive(() => {
+  // Hovedvinduet må aldrig bære en nøgle. Den indtastes i nøglevinduet, som gemmer den selv.
+  if (value && typeof value === 'object' && ('apiKey' in value || 'secret' in value)) throw new Error('Nøglen indtastes i nøglevinduet. Brug Indtast nøgle.');
+  return workbench.saveConnection(value);
+}));
+// Nøglevinduet: AI-nøgler og GitHub-token indtastes kun her, i et eget vindue med sin egen session.
+const keyWindow = new KeyWindow({
+  electron: { BrowserWindow, ipcMain, session }, uiDir: path.join(__dirname, 'ui'),
+  preload: path.join(__dirname, 'core', 'key-window-preload.cjs'),
+  parent: () => window, background: () => windowBackground(nativeTheme), title: 'Indtast nøgle',
+  openAccount: kind => { const pages = accountPages[kind]; if (pages) shell.openExternal(pages.keys || pages.start); }
+});
+// Hovedvinduet siger, hvad nøglen skal bruges til, og får kun kvitteringen: id, ny tilstand, modelkatalog fra
+// kontrollen og hvad rensningen rettede. Gemningen sker i hovedprocessen under den samme lås som Gem forbindelse.
+handle('key:connection', value => {
+  const bench = currentWorkbench(), chat = requestChatID();
+  return keyWindow.open(connectionPurpose({
+    input: value,
+    store: (input, options) => exclusive(() => bench.storeConnection(input, options), 'connections'),
+    state: () => bench.state(chat),
+    accountKinds: Object.keys(accountPages)
+  }));
+});
+handle('key:github', value => keyWindow.open(githubPurpose({
+  github: { connectToken: key => exclusive(async () => { hostingIdle(); publishing.reviews.clear(); return github.connectToken(key); }, 'hosting') },
+  target: value?.target === 'publish' ? 'publish' : 'backup'
+})));
+handle('key:cancel', () => { keyWindow.cancel(); return true; });
 handle('connections:remove', value => exclusive(() => workbench.removeConnection(value)));
 handle('connections:models', value => workbench.models(value));
 handle('connections:routes', value => workbench.routes(value.connectionID, value.modelID));

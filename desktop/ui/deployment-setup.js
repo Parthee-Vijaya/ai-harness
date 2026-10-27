@@ -190,7 +190,8 @@
     bind('#deployment-install', () => open(pages() ? 'login' : provider() === 'azure' && connection?.tools?.azureCli ? 'swa' : 'install', pages() ? 'github-pages' : provider()));
     bind('#deployment-account-link', () => open('account'));
     bind('#deployment-token-guide', () => open('token', 'github-pages'));
-    bind('#deployment-token-save', async () => { const token = $('#deployment-token').value; $('#deployment-token').value = ''; await api('hostingToken', token); await loadConnection(); });
+    // Nøglen indtastes i nøglevinduet. Udgiv får kun at vide, om adgangen blev gemt.
+    bind('#deployment-token-save', async () => { if (await api('keyGithub', { target: 'publish' })) await loadConnection(); });
     bind('#deployment-promte-host-next', () => { if ($('#deploy-promte-host').reportValidity()) return loadConnection(); });
     bind('#deployment-promte-open', () => open('host'));
     bind('#deployment-promte-workspace-next', async () => {
@@ -325,7 +326,7 @@
     new MutationObserver(() => renderHeader()).observe($('#deploy-button'), { attributes: true, attributeFilter: ['hidden', 'disabled'] });
     window.addEventListener('aura:features', () => renderHeader());
     setInterval(() => { if (trackingRoot && !document.hidden && !$('#workspace').hidden && window.sharingOn?.() && (tracking?.automatic || tracking?.last?.id)) refresh(true).catch(() => {}); }, 30000);
-    dialog.addEventListener('close', () => { void cancelPromteLogin(); ++epoch; clearTimeout(polling); if (loginID) api('hostingCancel').catch(() => {}); loginID = null; $('#deployment-token').value = ''; configReview = null; });
+    dialog.addEventListener('close', () => { void cancelPromteLogin(); ++epoch; clearTimeout(polling); if (loginID) api('hostingCancel').catch(() => {}); loginID = null; configReview = null; });
     providerList();
     return { choose, config, restore, opened, refresh, configurationStep, pages, panel: step => choices.has(step) ? 'setupChoice' : step, render(step) { if (step !== 'setupConnection' && loginID) { clearTimeout(polling); loginID = null; api('hostingCancel').catch(() => {}); } if (step === 'options') $('#deployment-save-settings').hidden = provider() === 'komplai'; if (step === 'providers') providerList(); if (choices.has(step)) renderChoice(choices.get(step)); }, title: step => choices.get(step)?.title || titles[step], reset() { ++epoch; choices.clear(); choice = null; promteSaved = ''; promteHost = ''; promteNames.clear(); $('#deploy-promte-workspace').replaceChildren(); $('#deploy-promte-workspace-id').value = ''; providerList(); } };
   } };

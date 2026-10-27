@@ -273,9 +273,12 @@ const helpers = require('./ui-test-helpers.cjs');
       assert.equal(await app.evaluate(() => globalThis.publishingProbe.githubLogin), true);
       assert.equal(await app.evaluate(() => globalThis.publishingProbe.githubDisconnects), 0);
       await page.locator('#deployment-connection-help > summary').click();
-      await page.fill('#deployment-token', 'syntetisk-adgangsnoegle');
-      await click('#deployment-token-save'); await step('pagesRepository');
-      assert.equal(await page.inputValue('#deployment-token'), '');
+      // Nøglevinduet er modalt, så Udgiv-dialogen er optaget, indtil nøglen er indtastet. Derfor ikke click().
+      await page.click('#deployment-token-save');
+      await require('./ui-test-helpers.cjs').enterCredential(app, 'syntetisk-adgangsnoegle');
+      await idle();
+      await step('pagesRepository');
+      await require('./ui-test-helpers.cjs').assertNoKeyFields(page);
       assert.equal(await app.evaluate(() => globalThis.publishingProbe.githubTokenUpdates), code === 401 ? 1 : 2);
     }
 

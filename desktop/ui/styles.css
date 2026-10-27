@@ -338,7 +338,8 @@ body.setup-guided .app-content { margin-left: 0; }
 #setup-provider .dialog-actions { justify-content: flex-end; }
 #setup-provider .key-guide { background: transparent; padding: 0; font-size: 13px; }
 #setup-provider #connection-advanced { margin: 18px 0; }
-#setup-provider #api-key, #setup-provider #provider-kind { font-size: 16px; padding: 13px; }
+#setup-provider #provider-kind { font-size: 16px; padding: 13px; }
+#setup-provider #key-state { font-size: 14px; }
 #setup-provider #connection-cost { font-size: 12px; }
 #setup-saved details, #setup-local-step details { margin-top: 24px; font-size: 13px; }
 #setup-ai, #local-discovery-status { font-size: 16px; line-height: 1.7; }
@@ -904,12 +905,34 @@ kbd { font: 600 11px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif
 #connections-setup { display: block; margin: 12px auto 0; }
 #azure-fields { margin-top: 16px; }
 
+/* Nøglevinduet er et vindue for sig med sin egen side. Det bruger appens tokens og hugger sig om sit indhold. */
+body.key-window { padding: 20px 22px; background: var(--surface); }
+.key-window main { display: grid; }
+.key-window-head { display: flex; align-items: center; gap: 10px; }
+.key-window h1 { margin: 0; font-size: 19px; line-height: 1.3; }
+.key-window h1:focus-visible { outline: none; }
+.key-window .hint { margin: 6px 0 0; color: var(--muted); }
+.key-window #key-status:empty { display: none; }
+.key-window-warning { margin: 12px 0 0; padding: 10px 12px; border: 1px solid var(--warning-line); border-radius: 8px; background: var(--warning-bg); color: var(--warning-ink); }
+.key-window-error { margin: 12px 0 0; padding: 10px 12px; border: 1px solid var(--danger-line); border-radius: 8px; background: var(--danger-bg); color: var(--danger-ink); }
+.key-window-error p { margin: 0; }
+.key-window-error details { margin-top: 8px; }
+.key-window-error summary { cursor: pointer; color: var(--accent-text); font-weight: 550; }
+.key-window-error pre { margin: 8px 0 0; padding: 8px 10px; border-radius: 6px; background: var(--fill); color: var(--ink); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.key-window-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; }
+.key-window-actions span { display: flex; gap: 8px; }
+
 /* Alle udbydere har samme plads. Formularen vises på det næste trin. */
 #setup-provider[data-view="choose"] { max-width: 900px; }
 #setup-provider[data-view="details"] { max-width: 520px; }
 .provider-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+/* De fire udbydere i første lag står på lige vilkår, to og to. */
+#provider-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#provider-more { display: block; margin: 0 auto 12px; }
 .provider-card { display: grid; grid-template-columns: 28px 1fr; align-content: center; align-items: center; gap: 6px 14px; min-height: 104px; padding: 18px; }
 .provider-card img { grid-row: 1 / 3; object-fit: contain; }
+/* Status hører til ved teksten, ikke under logoet i den smalle første søjle. */
+.provider-card small { grid-column: 2; }
 .provider-card strong { font-size: 17px; }
 .provider-card span { font-size: 12px; }
 .optional-color { display: flex; align-items: center; gap: 8px; }

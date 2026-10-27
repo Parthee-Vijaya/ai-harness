@@ -72,12 +72,12 @@ const helpers = require('./ui-test-helpers.cjs');
     await page.click('#open'); await page.waitForSelector('#workspace:not([hidden])');
     for (const kind of ['openai', 'azure']) {
       active = kind; calls = 0; phase = 'build';
-      await helpers.openSetup(page); await page.click('#setup-add-provider'); await page.click(`#provider-cards [data-kind="${kind}"]`);
+      await helpers.openSetup(page); await page.click('#setup-add-provider'); await helpers.chooseProviderCard(page, kind);
       if (kind === 'azure') {
         await page.fill('#azure-endpoint', 'https://aura-demo.openai.azure.com'); await page.fill('#azure-deployment', 'kommunens-kodemodel');
         await page.screenshot({ path: path.join(root, 'azure-opsatning.png') });
       }
-      await page.fill('#api-key', keys[kind]); await page.click('#save-connection');
+      await page.click('#enter-key'); await helpers.enterCredential(app, keys[kind]);
       await page.waitForFunction(() => document.querySelector('#setup').dataset.step === 'saved' && !document.querySelector('#setup-continue').disabled);
       await page.click('#setup-continue'); await page.waitForSelector('#workspace:not([hidden])');
       await helpers.taskOptions(page);
