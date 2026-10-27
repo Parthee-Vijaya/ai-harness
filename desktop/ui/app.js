@@ -746,11 +746,25 @@ async function loadRoutes(saved = '') {
   if (routes.some(route => route.id === saved)) $('#route-select').value = saved;
   renderContextUsage();
 }
-function selection() { return { effort: view?.effort || null, includeHistory: $('#include-history').checked, mode: $('#work-mode').value, planID: activePlan?.id, connectionID: $('#connection-select').value, modelID: $('#model-select').value, routeID: $('#route-select').value, references: [...document.querySelectorAll('#reference-choices input:checked')].map(el => el.value), fileRefs: window.workspace?.references() || [], previewTarget: window.workspace?.target()?.id || null, view: window.previewViewSize?.() || null, chat: view.id }; }
+function selection() { return { text: $('#prompt').value.trim(), effort: view?.effort || null, includeHistory: $('#include-history').checked, mode: $('#work-mode').value, planID: activePlan?.id, connectionID: $('#connection-select').value, modelID: $('#model-select').value, routeID: $('#route-select').value, references: [...document.querySelectorAll('#reference-choices input:checked')].map(el => el.value), fileRefs: window.workspace?.references() || [], previewTarget: window.workspace?.target()?.id || null, view: window.previewViewSize?.() || null, chat: view.id }; }
 const detailLabels = { projectInstructions: 'Projektets egne regler, der sendes', rules: 'Fælles grundregler, der sendes', workspace: 'Arbejdsmappe', mode: 'Arbejdsmåde', brief: 'Projektbrief, der sendes', previewReferenceText: 'Valgt element, der sendes', conversation: 'Tidligere samtale, der sendes', projectGuidance: 'Appens vejledning om projektvalg og design', planContext: 'Plan og afklaring, der sendes', projectChoices: 'Projektets opstartsvalg', projectDesign: 'Projektets designvalg', fileReferences: 'Filhenvisninger i beskeden', connection: 'Forbindelse', model: 'Model', endpoint: 'Serveradresse', recipients: 'Modtagere', region: 'Behandlingssted', retention: 'Opbevaring', training: 'Brug til træning', price: 'Pris og gratisbegrænsninger', capabilities: 'Modelmuligheder', material: 'Hvad sendes?', references: 'Udvalgte private referencer', skills: 'Skills, AI’en kan hente', localStorage: 'Lokal historik og yderligere netværk', security: 'Forbindelsens sikkerhed', source: 'Kilde', checkedAt: 'Dokumentation kontrolleret', evidence: 'Grundlag' };
 // Kort resumé i almindeligt dansk. Alle oplysninger ligger under "Se alle oplysninger".
 // Modelstøtte: kun det, udbyderens katalog oplyser. Aura viser aldrig sine egne iagttagelser som prøver, og
 // "ikke oplyst" er ikke det samme som understøttet. Efter forslag i #37.
+// Appens egne instruktioner, som de sendes, ét fragment ad gangen med sin egen kontrolsum. Teksten ligger bag
+// hver sin fold, så listen er til at overskue, og rækkevidden står først, så den ikke læses som hele modelkaldet.
+function appendAppContext(appContext) {
+  if (!appContext?.components?.length) return;
+  const dd = node('dd'), list = node('div');
+  list.append(node('p', appContext.scope, 'hint'));
+  for (const part of appContext.components) {
+    const fold = node('details');
+    fold.append(node('summary', `${part.title} (${part.text.split(/\s+/).length} ord)`), node('pre', part.text), node('p', `Kontrolsum: ${part.hash}`, 'hint'));
+    list.append(fold);
+  }
+  dd.append(list);
+  $('#data-details').append(node('dt', 'Appens egne instruktioner, der sendes'), dd);
+}
 function appendModelSupport(support) {
   if (!support) return;
   const word = value => value === true ? 'understøttet' : value === false ? 'ikke understøttet' : 'ikke oplyst';
@@ -794,6 +808,7 @@ function showData(data, canSend) {
     $('#data-details').append(node('dt', label), dd);
   }
   appendModelSupport(data.modelSupport);
+  appendAppContext(data.appContext);
   $('#accept-send').hidden = !canSend; $('#data-dialog').showModal();
 }
 async function sendNow(data, text) {
@@ -807,7 +822,7 @@ async function sendNow(data, text) {
   Object.assign(v, { lastSentText: text, lastTarget: data.previewReference || '', lastTargetRef: window.workspace?.target() || null, lastCheckpoint: null, rejectedThisRun: false, lastRejection: null });
   appendMessage(text + (data.fileReferenceText || '') + (v.lastTarget ? `\n\nMål i forhåndsvisningen: ${v.lastTarget}` : ''), 'user', v); $('#prompt').value = ''; await saveChatDraft();
   const compact = v.compactNext === true; v.compactNext = false; v.effortLevels = data.effortLevels || [];
-  try { await call('send', { text, fingerprint: data.fingerprint, chat: v.id, compact }, owner); if (view === v) { acceptedFingerprint = reviewKey(data); window.workspace?.clearReferences(); } }
+  try { await call('send', { text, fingerprint: data.fingerprint, contextBinding: data.contextBinding, chat: v.id, compact }, owner); if (view === v) { acceptedFingerprint = reviewKey(data); window.workspace?.clearReferences(); } }
   catch (error) { if (error.message === 'Opgaven blev stoppet før afsendelse.') { setRunning(false, 'Stoppet', v); return; } if (view === v) { $('#prompt').value = text; await saveChatDraft(); } setRunning(false, 'Fejl', v); renderRunReview({ status: 'error', files: [], tools: [], failure: { kind: 'start', message: error.message } }, v); }
 }
 // Under en opgave viser statusfeltet, hvor længe den har kørt, så en lang tænkepause ikke ligner, at appen er gået i stå.

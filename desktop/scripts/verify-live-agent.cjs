@@ -23,9 +23,9 @@ const { startPreview } = require('../core/preview.cjs');
   try {
     await bench.activate(await openProject(project));
     const saved = await bench.saveConnection({ kind: 'zen', name: 'Zen offentlig gratisprøve', baseURL: '', apiKey: '' });
-    const info = await bench.prepare({ connectionID: saved.connections[0].id, modelID: 'big-pickle', references: [] });
+    const info = await bench.prepare({ connectionID: saved.connections[0].id, modelID: 'big-pickle', references: [], text: 'Dette er en afgrænset integrationstest med syntetiske data. Læs public/index.html og skift kun h1-teksten fra Start til Lokal agenttest bestået. Brug read og edit eller write direkte. Kør ingen shellkommandoer, brug ikke Git, hent ingen websider, læs ingen andre projektfiler. Svar kort, når ændringen er skrevet.' });
     console.log(JSON.stringify({ destination: info.endpoint, model: info.model, data: 'Kun syntetisk startside og offentlige Aura Harness-regler', root }));
-    await bench.send({ text: 'Dette er en afgrænset integrationstest med syntetiske data. Læs public/index.html og skift kun h1-teksten fra Start til Lokal agenttest bestået. Brug read og edit eller write direkte. Kør ingen shellkommandoer, brug ikke Git, hent ingen websider, læs ingen andre projektfiler. Svar kort, når ændringen er skrevet.', fingerprint: info.fingerprint });
+    await bench.send({ text: 'Dette er en afgrænset integrationstest med syntetiske data. Læs public/index.html og skift kun h1-teksten fra Start til Lokal agenttest bestået. Brug read og edit eller write direkte. Kør ingen shellkommandoer, brug ikke Git, hent ingen websider, læs ingen andre projektfiler. Svar kort, når ændringen er skrevet.', fingerprint: info.fingerprint, contextBinding: info.contextBinding });
     const deadline = Date.now() + 180000;
     while (bench.running && Date.now() < deadline) await new Promise(r => setTimeout(r, 300));
     if (bench.running) { await bench.stop(); throw new Error('Modelprøven overskred testens timeout.'); }

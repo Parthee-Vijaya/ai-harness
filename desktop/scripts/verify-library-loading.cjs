@@ -43,21 +43,21 @@ async function scenario(surface, mode) {
     await bench.features.save(project, { scope: 'projekt', values: Object.fromEntries(library.features.map(feature => [feature.id, feature.id === 'design'])) });
     bench.selection = async () => ({ connection: { id: 'prøve', kind: 'compatible', name: 'Lokal prøve', baseURL: `http://127.0.0.1:${server.address().port}/v1` }, model: { id: 'model', name: 'Kontrolleret model', tool_call: true, limit: { context: 32768, output: 4096 } } });
     reference = path.join(bench.store.root, 'runtime', bench.store.projectKey(project), 'config/skills/harness-design-og-tilgaengelighed/references/tilgaengelighed.md');
-    const review = await bench.prepare({ mode });
+    const review = await bench.prepare({ mode, text: 'Undersøg designet' });
     assert.equal(review.projectInstructions.content, own);
     // Grundreglerne i gennemgangen er de samme, AI'en får. En projekttilpasning skal både stå i gennemgangen
     // og kræve en ny gennemgang, fordi reglerne binder afsendelsen.
     assert.equal(review.rules, (await bench.skills.context(project)).rules);
     await bench.skills.save(project, { id: 'faelles-grundregler', content: review.rules + '\nPROEVEREGEL-' + surface + ': Bevar brugerens funktioner.\n' });
-    const customized = await bench.prepare({ mode });
+    const customized = await bench.prepare({ mode, text: 'Undersøg designet' });
     assert.notEqual(customized.fingerprint, review.fingerprint);
     assert.match(customized.rules, new RegExp('PROEVEREGEL-' + surface));
     const firstFingerprint = customized.fingerprint;
     await fs.writeFile(path.join(project, 'AGENTS.md'), own + 'NY-REGEL\n');
-    await assert.rejects(bench.send({ text: 'Undersøg designet', fingerprint: firstFingerprint }), /har ændret sig/);
+    await assert.rejects(bench.send({ text: 'Undersøg designet', fingerprint: firstFingerprint, contextBinding: customized.contextBinding }), /har ændret sig/);
     assert.equal(requests.length, 0, 'Ingen modelkald efter en ændret instruktionsfil');
-    const next = await bench.prepare({ mode }); assert.notEqual(next.fingerprint, firstFingerprint);
-    await bench.send({ text: 'Undersøg designet uden filændringer', fingerprint: next.fingerprint });
+    const next = await bench.prepare({ mode, text: 'Undersøg designet uden filændringer' }); assert.notEqual(next.fingerprint, firstFingerprint);
+    await bench.send({ text: 'Undersøg designet uden filændringer', fingerprint: next.fingerprint, contextBinding: next.contextBinding });
     const status = await finished; assert.equal(status, 'idle');
     const main = requests.filter(body => body.tools?.some(tool => tool.function?.name === 'skill'));
     const system = JSON.stringify(main[0].messages.filter(message => message.role === 'system'));
@@ -76,8 +76,8 @@ async function scenario(surface, mode) {
     const previousSession = bench.chat.engine.session.id;
     clearTimeout(timer); finished = waitForRun();
     await fs.writeFile(path.join(project, 'AGENTS.md'), own + 'TREDJE-REGEL\n');
-    const changed = await bench.prepare({ mode });
-    await bench.send({ text: 'Læs med de nye regler', fingerprint: changed.fingerprint });
+    const changed = await bench.prepare({ mode, text: 'Læs med de nye regler' });
+    await bench.send({ text: 'Læs med de nye regler', fingerprint: changed.fingerprint, contextBinding: changed.contextBinding });
     assert.equal(await finished, 'idle');
     assert.notEqual(bench.chat.engine.session.id, previousSession, 'Ændrede regler starter en ny modelsession');
     const latest = requests.filter(body => body.tools?.some(tool => tool.function?.name === 'skill')).at(-1);
