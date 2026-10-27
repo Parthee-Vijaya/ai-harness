@@ -45,7 +45,14 @@ async function scenario(surface, mode) {
     reference = path.join(bench.store.root, 'runtime', bench.store.projectKey(project), 'config/skills/harness-design-og-tilgaengelighed/references/tilgaengelighed.md');
     const review = await bench.prepare({ mode });
     assert.equal(review.projectInstructions.content, own);
-    const firstFingerprint = review.fingerprint;
+    // Grundreglerne i gennemgangen er de samme, AI'en får. En projekttilpasning skal både stå i gennemgangen
+    // og kræve en ny gennemgang, fordi reglerne binder afsendelsen.
+    assert.equal(review.rules, (await bench.skills.context(project)).rules);
+    await bench.skills.save(project, { id: 'faelles-grundregler', content: review.rules + '\nPROEVEREGEL-' + surface + ': Bevar brugerens funktioner.\n' });
+    const customized = await bench.prepare({ mode });
+    assert.notEqual(customized.fingerprint, review.fingerprint);
+    assert.match(customized.rules, new RegExp('PROEVEREGEL-' + surface));
+    const firstFingerprint = customized.fingerprint;
     await fs.writeFile(path.join(project, 'AGENTS.md'), own + 'NY-REGEL\n');
     await assert.rejects(bench.send({ text: 'Undersøg designet', fingerprint: firstFingerprint }), /har ændret sig/);
     assert.equal(requests.length, 0, 'Ingen modelkald efter en ændret instruktionsfil');
@@ -55,6 +62,9 @@ async function scenario(surface, mode) {
     const main = requests.filter(body => body.tools?.some(tool => tool.function?.name === 'skill'));
     const system = JSON.stringify(main[0].messages.filter(message => message.role === 'system'));
     assert.match(system, new RegExp('PROJEKTREGEL-' + surface)); assert.match(system, /NY-REGEL/);
+    // Den regeltekst, gennemgangen viste, står ordret i det faktiske modelkald.
+    assert.ok(main[0].messages.some(message => message.role === 'system' && typeof message.content === 'string' && message.content.includes(next.rules)), 'grundreglerne fra gennemgangen står ordret i modelkaldet');
+    assert.match(system, new RegExp('PROEVEREGEL-' + surface));
     assert.match(system, /Kilde: AGENTS.md/); assert.match(system, /Ved modstrid/); assert.match(system, /FÆLLES-GRUNDLAG-02/);
     assert.deepEqual([...system.matchAll(/<name>(harness-[a-z0-9-]+)<\/name>/g)].map(match => match[1]), ['harness-design-og-tilgaengelighed']);
     const tools = main.at(-1).messages.filter(message => message.role === 'tool').map(message => JSON.stringify(message.content));
@@ -73,7 +83,7 @@ async function scenario(surface, mode) {
     const latest = requests.filter(body => body.tools?.some(tool => tool.function?.name === 'skill')).at(-1);
     const latestSystem = JSON.stringify(latest.messages.filter(message => message.role === 'system'));
     assert.match(latestSystem, /TREDJE-REGEL/); assert.doesNotMatch(latestSystem, /NY-REGEL/);
-    return { surface, mode, root, modelkald: requests.filter(body => body.tools?.some(tool => tool.function?.name === 'skill')).length, betalteKald: 0, kontroller: ['projektregler med kilde', 'ny gennemgang og modelsession ved ændring', 'kun valgte skills', 'skill og reference læst', 'fravalgt skill afvist'] };
+    return { surface, mode, root, modelkald: requests.filter(body => body.tools?.some(tool => tool.function?.name === 'skill')).length, betalteKald: 0, kontroller: ['projektregler med kilde', 'grundreglerne fra gennemgangen ordret i modelkaldet', 'ny gennemgang og modelsession ved ændring', 'kun valgte skills', 'skill og reference læst', 'fravalgt skill afvist'] };
   } finally { clearTimeout(timer); await bench.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
 }
 (async () => console.log(JSON.stringify({ status: 'bestået', results: [await scenario('desktop', 'chat'), await scenario('desktop', 'plan'), await scenario('cli', 'free')] }, null, 2)))().catch(error => { console.error(error); process.exitCode = 1; });
