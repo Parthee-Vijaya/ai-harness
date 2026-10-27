@@ -7,6 +7,8 @@ module.exports = new Set([
   'approvals.js',
   'aura-icon.png',
   'chat-display.js',
+  'chat-materials.css',
+  'chat-materials.js',
   'chats.js',
   'connection-overview.js',
   'context-display.js',

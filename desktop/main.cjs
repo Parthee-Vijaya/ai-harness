@@ -150,6 +150,16 @@ handle('updates:notes', () => {
   if (!version || !/^\d+\.\d+\.\d+(?:-beta\.\d+)?$/.test(version)) throw new Error('Vælg en tilgængelig udgivelse.');
   return shell.openExternal(`https://github.com/ai-alliancen-org/ai-harness/releases/tag/v${version}`);
 });
+// Vedhæftninger til én besked. Filstier kommer kun fra computerens egen filvælger; reglerne står i
+// core/chat-materials.cjs, og brugerfladen sender kun id'er, den har fået herfra.
+require('./core/chat-materials-ipc.cjs').installChatMaterials({
+  getWorkbench: () => registry?.selected,
+  isSelected: bench => registry?.selected === bench,
+  register: handle,
+  dialog: { showOpenDialog: options => dialog.showOpenDialog(window, options) },
+  exclusive,
+  emit: event => sendEvent(event)
+});
 async function exclusive(action, forced) {
   const request = requests.getStore();
   // Nøglevinduet gemmer uden for hovedvinduets kald og siger derfor selv, hvilken kategori der låses.

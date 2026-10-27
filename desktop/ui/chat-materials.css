@@ -1,0 +1,26 @@
+/* Vedhæftninger til én besked. Plusmenuen har to punkter, og det valgte står som små mærker over skrivefeltet. */
+.material-menu-wrap { position: relative; margin-right: auto; }
+#chat-materials-plus { width: 28px; height: 28px; padding: 0; border-radius: 8px; font-size: 15px; line-height: 1; }
+#chat-materials-menu { position: absolute; bottom: calc(100% + 8px); left: 0; z-index: 5; display: grid; gap: 4px; min-width: 246px; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: 0 8px 24px color-mix(in srgb, var(--shadow) 14%, transparent); text-align: left; }
+#chat-materials-menu[hidden] { display: none; }
+#chat-materials-menu strong { font-size: 11px; color: var(--muted); letter-spacing: .02em; }
+#chat-materials-menu button { display: grid; gap: 1px; width: 100%; padding: 8px 10px; border: 0; border-radius: 8px; background: transparent; font-size: 13px; text-align: left; }
+#chat-materials-menu button:hover:not(:disabled) { background: var(--fill); }
+#chat-materials-menu button small { font-size: 11px; color: var(--muted); }
+#chat-materials-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
+#chat-materials-chips[hidden] { display: none; }
+.material-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 24em; padding: 3px 4px 3px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--fill); font-size: 11px; }
+.material-chip > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.material-chip button { width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; background: transparent; font-size: 13px; line-height: 1; color: var(--muted); }
+.material-chip button:hover:not(:disabled) { background: var(--surface); color: var(--ink); }
+#chat-materials-status { margin: 4px 0 0; font-size: 11px; color: var(--muted); }
+#chat-materials-status[hidden] { display: none; }
+/* Gennemgangen: først navnene, derefter det præcise indhold med kontrolsum. */
+#chat-materials-dialog { max-width: 720px; }
+#chat-materials-dialog section { margin-bottom: 16px; }
+#chat-materials-dialog h3 { margin: 0; font-size: 13px; overflow-wrap: anywhere; }
+#chat-materials-dialog small { display: block; margin: 2px 0 6px; font-size: 11px; color: var(--muted); overflow-wrap: anywhere; }
+#chat-materials-dialog pre, #data-materials pre { max-height: 240px; overflow: auto; margin: 0; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--fill-strong); font-size: 11px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.material-candidates { display: grid; gap: 4px; max-height: 320px; overflow: auto; margin: 10px 0; }
+#data-materials h3 { margin: 16px 0 6px; font-size: 13px; }
+#data-materials p { margin: 0 0 4px; font-size: 12px; overflow-wrap: anywhere; }

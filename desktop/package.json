@@ -54,6 +54,7 @@
     "test:live-app": "node scripts/verify-live-app.cjs",
     "test:versions": "node scripts/verify-versions.cjs",
     "test:library-loading": "node scripts/verify-library-loading.cjs",
+    "test:materials": "node scripts/verify-materials.cjs",
     "test:app-skills": "node scripts/verify-app-skills.cjs",
     "test:features": "node scripts/verify-features.cjs",
     "measure:screens": "node scripts/measure-screens.cjs",
