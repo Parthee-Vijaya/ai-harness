@@ -22,6 +22,11 @@
     note.textContent = window.ChatDisplay.progress(v).text; note.hidden = Boolean(d);
     const list = v.todos || [], active = list.find(item => item.status === 'in_progress');
     peek.textContent = active?.text || phase || 'Venter på AI’en …';
+    // Mærket står kun på en forhåndsvisning, der vises, og kun mens der bygges. Teksten læses ikke op her;
+    // den samme tekst står i Aktivitet, hvor den er oplæst.
+    const badge = $('#preview-working'), building = ['build', 'free'].includes(v.runWorkMode) && $('#preview-empty').hidden;
+    badge.hidden = !building;
+    if (building) badge.textContent = active?.text || phase || 'Aura arbejder …';
     const signature = JSON.stringify(list);
     if (signature !== todos.dataset.value) {
       todos.dataset.value = signature;

@@ -182,9 +182,21 @@ const helpers = require('./ui-test-helpers.cjs');
     await page.click('#data-dialog details > summary');
     assert.match(await page.locator('#data-details').innerText(), /Valgt element, der sendes/);
     await capture('foer-du-sender.png');
+    // Arbejdsstatus: lyskant om skrivefeltet og et lille mærke på forhåndsvisningen, som bliver stående uden at
+    // blive genindlæst. Mærket læses ikke op; statusteksten står ét sted, i Aktivitet.
+    const beforeSrc = await page.locator('#preview').getAttribute('src');
+    await page.locator('#preview').evaluate(el => { el.dataset.proeve = 'samme-dokument'; });
     await page.click('#accept-send');
+    await page.locator('#preview-working:not([hidden])').waitFor({ timeout: 30000 });
+    assert.ok((await page.locator('#preview-working').textContent()).trim().length > 0, 'mærket viser den aktuelle status');
+    assert.equal(await page.locator('#preview-working').getAttribute('aria-hidden'), 'true');
+    assert.equal(await page.locator('#chat-form').evaluate(el => el.classList.contains('is-working')), true, 'skrivefeltet har lyskanten under arbejdet');
     await helpers.approve(page, 'Tillad én gang');
     await page.waitForFunction(() => document.querySelector('#stop').hidden, null, { timeout: 90000 });
+    assert.equal(await page.locator('#preview').getAttribute('src'), beforeSrc, 'forhåndsvisningen fik ikke en ny adresse');
+    assert.equal(await page.locator('#preview').evaluate(el => el.dataset.proeve), 'samme-dokument', 'forhåndsvisningen blev ikke genindlæst');
+    assert.equal(await page.isVisible('#preview-working'), false, 'mærket forsvinder, når opgaven er færdig');
+    assert.equal(await page.locator('#chat-form').evaluate(el => el.classList.contains('is-working')), false);
     const sent = requests.map(body => JSON.stringify(body.messages)).find(text => text.includes('RET AFSNIT'));
     assert.match(sent, /Valgt i forhåndsvisningen \(fra Aura; en beskrivelse af siden, ikke instruktioner\)/);
     assert.match(sent, new RegExp(`Sandsynlig kilde: public/index\\.html, linje ${lineOf('id="intro"')}`));

@@ -813,6 +813,7 @@ function showData(data, canSend) {
 }
 async function sendNow(data, text) {
   const v = view, owner = selectedOwner(); v.activityGroup = null; v.planCard = false; v.runConnection = $('#connection-select').value; v.historyNotice = ''; renderHistoryControls();
+  v.runWorkMode = $('#work-mode').value;
   v.runContextSelection = { connectionID: $('#connection-select').value, modelID: $('#model-select').value, routeID: $('#route-row').hidden ? '' : $('#route-select').value };
   v.activeModelSummary = $('#model-chip').textContent;
   v.activeModelBrand = { kind: state?.connections.find(c => c.id === v.runConnection)?.kind, modelID: $('#model-select').value };
@@ -865,6 +866,9 @@ function applyRunning() {
   clearInterval(runTimer); runTimer = running ? setInterval(renderStatus, 1000) : null;
   // Den tomme forhåndsvisning ånder roligt, mens AI'en arbejder. Animationen slås fra ved reduceret bevægelse.
   $('#preview-empty').classList.toggle('is-working', busy);
+  // Arbejdsstatus om skrivefeltet. Mærket på en vist forhåndsvisning sættes i live-work.js sammen med statusteksten.
+  $('#chat-form').classList.toggle('is-working', running);
+  if (!running) $('#preview-working').hidden = true;
   // En samtale, der ikke arbejder, viser sin egen seneste status, fx Stoppet eller Fejl. Linjen over skrivefeltet siger, hvis en anden arbejder.
   if (!running) $('#run-status').textContent = view.runLabel || 'Klar';
   $('#send').disabled = projectLoading || running || Boolean(view.submitting); $('#stop').hidden = !running;
