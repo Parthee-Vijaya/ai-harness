@@ -119,7 +119,8 @@ test('real stdio MCP boundary exposes only local tools, never an API proxy', asy
     await client.connect(transport);
     assert.deepEqual((await client.listTools()).tools.map(tool => tool.name), ['aura_lab_list_candidates', 'aura_json_to_csv', 'aura_csv_to_json', 'aura_text_diff', 'aura_validate_iban']);
     const result = await client.callTool({ name: 'aura_lab_list_candidates', arguments: {} });
-    assert.equal(result.structuredContent.auraDesktopEnabled, false);
+    assert.equal(result.structuredContent.desktopIntegration, 'trusted-native-plugin');
+    assert.equal(result.structuredContent.standaloneServerInstalledByPackage, false);
     assert.equal(result.structuredContent.candidates.length, 4);
     assert.equal((await client.callTool({ name: 'call_api', arguments: {} })).isError, true);
   } finally { await client.close(); }

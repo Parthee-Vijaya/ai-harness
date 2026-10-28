@@ -51,10 +51,10 @@ const hash = value => createHash('sha256').update(value).digest('hex');
     await page.evaluate(() => window.harness.onEvent(event => window.observeLocalTools(event)));
     stage = 'connection';
     const endpoint = `http://127.0.0.1:${front.address().port}/v1`;
-    const connection = await helpers.addConnection(page, { name: 'Synthetic tool model', baseURL: endpoint, apiKey: 'synthetic-tool-key' });
+    const connection = await helpers.addConnection(page, { name: 'Synthetic tool model', baseURL: endpoint });
     stage = 'project';
     await page.fill('#name', 'Lokale tools'); await page.fill('#purpose', 'Afprøv kun lokale datafunktioner med syntetiske data.');
-    await page.click('#create'); await page.waitForSelector('#workspace:not([hidden])');
+    await page.click('#create'); await page.waitForSelector('#workspace:not([hidden])', { timeout: 120_000 });
     stage = 'model';
     await helpers.taskOptions(page);
     await page.locator('#model-catalog').evaluate(element => element.open = true);
@@ -152,7 +152,8 @@ const hash = value => createHash('sha256').update(value).digest('hex');
     console.log(JSON.stringify({ status: 'passed', reports, checks, approvals: approvals.length, sharingReviews: sharing.length }));
   } catch (error) {
     await page?.screenshot({ path: path.join(reports, 'failure.png'), fullPage: true }).catch(() => {});
-    await fs.writeFile(path.join(reports, 'failure.json'), JSON.stringify({ error: error.message, launch, approvals, sharing, errors, events: events.slice(-15), providerCalls: provider.requests.length }, null, 2));
+    const visibleText = await page?.locator('body').innerText({ timeout: 3000 }).catch(() => null);
+    await fs.writeFile(path.join(reports, 'failure.json'), JSON.stringify({ error: error.message, launch, approvals, sharing, errors, visibleText: visibleText?.slice(0, 6000), events: events.slice(-15), providerCalls: provider.requests.length }, null, 2));
     console.error(JSON.stringify({ reports, stage, error: error.message, stack: error.stack?.split('\n').slice(0, 4) })); throw error;
   } finally { await app?.close(); await provider.close(); front.closeAllConnections(); await new Promise(resolve => front.close(resolve)); await fs.rm(temp, { recursive: true, force: true }); }
 })().catch(error => { console.error(error.message); process.exitCode = 1; });

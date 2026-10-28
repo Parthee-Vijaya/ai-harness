@@ -14,7 +14,7 @@ export function createServer() {
     inputSchema: {},
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
   }, async () => {
-    const data = { schemaVersion: 1, phase: 'local-prototype', auraDesktopEnabled: false, tools: localManifest, candidates: contracts.map(({ service, endpoint, provider, atoms }) => ({ id: service, referenceEndpoint: endpoint, referenceProvider: provider, listedAtoms: atoms })) };
+    const data = { schemaVersion: 1, phase: 'desktop-integrated', desktopIntegration: 'trusted-native-plugin', standaloneServerInstalledByPackage: false, tools: localManifest, candidates: contracts.map(({ service, endpoint, provider, atoms }) => ({ id: service, referenceEndpoint: endpoint, referenceProvider: provider, listedAtoms: atoms })) };
     return { content: [{ type: 'text', text: JSON.stringify(data) }], structuredContent: data };
   });
   for (const definition of toolDefinitions) server.registerTool(definition.name, {

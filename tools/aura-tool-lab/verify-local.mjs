@@ -19,7 +19,7 @@ try {
     results.push({ caseId: fixture.id, tool: mapped.name, status: passed ? 'passed' : 'failed', latencyMs: Math.round(performance.now() - started), response: response.structuredContent });
   }
 } finally { await client.close(); }
-const payload = { checkedAt: new Date().toISOString(), boundary: 'real-stdio-mcp-process', additionalExternalCalls: 0, auraDesktopEnabled: false, results };
+const payload = { checkedAt: new Date().toISOString(), boundary: 'real-stdio-mcp-process', additionalExternalCalls: 0, desktopIntegration: 'trusted-native-plugin', results };
 await fs.writeFile(path.join(directory, 'local-comparison.json'), JSON.stringify(payload, null, 2));
 await fs.writeFile(path.join(directory, 'local-comparison.csv'), csv(results.map(({ caseId, tool, status, latencyMs }) => ({ caseId, tool, status, latencyMs }))));
 await fs.writeFile(new URL('./manifest.json', import.meta.url), JSON.stringify({ schemaVersion: 1, package: '@aura/tool-lab', version: '0.1.0', tools: localManifest }, null, 2) + '\n');
