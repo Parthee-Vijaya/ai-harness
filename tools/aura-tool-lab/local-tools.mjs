@@ -71,11 +71,16 @@ export const toolDefinitions = [
 
 export const localManifest = toolDefinitions.map(({ schema, outputSchema, ...metadata }) => ({ ...metadata, inputSchema: z.toJSONSchema(schema), outputSchema: z.toJSONSchema(outputSchema) }));
 
-export function invokeLocal(name, input) {
+export function validateLocal(name, input) {
   const definition = toolDefinitions.find(item => item.name === name);
   if (!definition) throw new Error('Unknown local tool');
   bounded(input);
   const parsed = definition.schema.safeParse(input);
   if (!parsed.success) throw new Error('Invalid tool arguments');
-  return definition.outputSchema.parse(execute[name](parsed.data));
+  return parsed.data;
+}
+export function invokeLocal(name, input) {
+  const parsed = validateLocal(name, input);
+  const definition = toolDefinitions.find(item => item.name === name);
+  return definition.outputSchema.parse(execute[name](parsed));
 }

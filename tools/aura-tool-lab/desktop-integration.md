@@ -1,59 +1,73 @@
-# Kontrakt for integration i Aura Harness
+# Lokale tools i Aura Harness
 
-## Leveret grænseflade
+De fire tools er integreret i desktopmotoren. Der er ikke åbnet for eksterne
+MCP-servere, projekttilføjede plugins eller en rå Apyhub-proxy. Ingen UI-filer er
+ændret.
 
-`manifest.json` beskriver fire lokale, versionsmærkede tools med stabile navne,
-input/output-schemaer, inputgrænser og deklaration af ingen datadeling eller
-filadgang. `invokeLocal(name, input)` er det direkte bibliotekskald. `server.mjs`
-leverer samme funktioner gennem MCP over stdio. Apyhub-klient og credentials
-indlæses kun af laboratoriets CLI, aldrig af den lokale MCP-server.
+## Den betroede pluginvej
 
-## Knyt til hovedprocessen
+`desktop/core/local-tools.cjs` kontrollerer hash og kopierer den faste plugin til
+motorens private tilstand. `engine.cjs` registrerer pluginen og bekræfter dens
+identitet/status gennem den rigtige OpenCode 2.1.4 API før første prompt.
+Pluginen indeholder CSV-, diff-, IBAN- og schemabiblioteker i én bundlet fil;
+der hentes ingen biblioteker ved appstart. Licenser følger med i pakken.
 
-En senere appændring bør indlæse det betroede manifest fra den pakkede app og
-registrere præcis disse fire tools. Appen vælger toolversion og executable;
-projektfiler og modeloutput må ikke tilføje MCP-servere eller ændre stien.
+`desktop-plugin-entry.mjs` og `local-tools.mjs` er den vedligeholdte kilde.
+`build-desktop-plugin.mjs` bygger den selvstændige appfil, licensnoter og
+`local-tools-integrity.json`. `manifest.json` beskriver den separate MCP-pakkes
+fulde kontrakter; desktopadapteren validerer de samme argumenter før native
+schemafortolkning og før udførelse.
 
-Brug enten bibliotekskald i en afgrænset worker eller en stdio-proces startet af
-hovedprocessen med den medfølgende runtime. Send kun de konkrete, validerede
-argumenter. Processen behøver hverken credentials, projektmapper eller netværk.
-Anvend appens tekniske isolation; metadata som `dataEgress: none` er ikke i sig
-selv en OS-beskyttelse. Afprøvningen på macOS har verificeret, at funktionerne og
-MCP-processen virker, når netværk og filskrivning afvises.
+## Godkendelser
 
-## Godkendelser og datagrænser
+Hvert tool har sin egen eksplicitte `ask`-regel, også i Samtale og Planlæg.
+Kaldet følger motorens eksisterende permission-flow og Auras eksisterende kort.
+En hash af de konkrete argumenter og toolversionen indgår i godkendelsens match
+og fingeraftryk. Afvigende input eller version afvises. Argumenterne kopieres
+før ventetiden og kontrolleres igen efter godkendelsen.
 
-Appens nuværende `ApprovalsPolicy` har ingen generel MCP-tilladelse, og motoren
-har bevidst tomt `mcp.servers`. Bevar den afvisende standard. En appintegration
-skal oversætte et konkret lokalt toolkald til appens eksisterende kontrolforløb:
+De nye tilladelser kan kun gives én gang. Projektregler og YOLO giver dem ikke
+automatisk adgang. Stop og afsluttede forespørgsler kan ikke genafspilles.
+Toolene har ingen filindgang, shell, netværksklient eller credentials.
+Filindhold skal stadig komme gennem Auras eksisterende filadgang.
 
-1. Bind kaldet til aktuel samtale, projekt, plan og toolversion.
-2. Valider input før godkendelse. Vis funktion, dataomfang og lokal udførelse på
-   det eksisterende godkendelseskort; lav ikke en skjult global tilladelse.
-3. Bind godkendelsen til en hash af de præcise argumenter, og genkontrollér den
-   ved udførelse. Et senere ændret input kræver en ny vurdering.
-4. Respektér Stop, annullering, tilbagetrukne tilladelser og aktive dataregler.
-5. Valider output og registrer toolnavn, version, udfald og varighed. Gem ikke
-   rå IBAN, tekstindhold, nøgler eller andet følsomt input i aktivitetsloggen.
+## Privacy Gate
 
-Filer skal læses gennem Auras eksisterende filadgang og Privacy Gate før deres
-indhold gives til et tool. Pakken har ingen alternativ filindgang. Lokalt
-output kan stadig være følsomt, når det returneres til en ekstern model;
-appens regler for modeldeling gælder derfor også efter et lokalt toolkald.
+Toolresultatet returneres i den samme isolerede motorsession. Næste modelkald
+passerer den eksisterende gateway og Privacy Gate. En toolgodkendelse giver
+ikke en delingstilladelse og nedklassificerer ikke resultatet.
 
-Hvis Apyhub senere skal kunne kaldes fra selve Aura, er det en separat ekstern
-udførelsesvej. Den skal være eksplicit valgt og have godkendt destination,
-leverandør, argumenter og forbrug. Brug Auras credentialmekanisme i hovedprocessen.
-Indlæs ikke laboratoriets private credentialfiler i modellen eller agentprocessen.
-Skift aldrig automatisk fra lokal udførelse til en ekstern leverandør.
+Den native prøve bekræfter:
 
-## Accept før aktivering i installeret Aura
+- Alle fire tools og de fem fælles testcases virker med den dokumenterede lokale
+  loopback-testmodel under Privacy Gates lokale tilstand.
+- En cloud-prøve viser og sender præcis de gennemgåede offentlige modelkald,
+  inklusive det lokale CSV-tools resultat.
+- Et lokalt tool må gerne behandle syntetisk maildata, men den efterfølgende
+  cloudforespørgsel bliver blokeret. Datareglerne svækkes ikke for at få testen igennem.
+- Afvis og Stop giver ingen færdig toolhandling eller efterfølgende modelkald;
+  genafspilning af svaret afvises i den rigtige IPC.
 
-- Registrering og toolkald verificeret mod den faktisk anvendte OpenCode-version.
-- Plan-, godkendelses- og Privacy Gate-tests for de nye toolkald.
-- Afvisning af ukendte tools, ændrede argumenter, tilbagekaldt tilladelse og kald
-  fra en afsluttet eller forkert samtale.
-- Native kontrol gennem en rigtig modelsamtale i en separat Aura-testprofil.
-- Verificeret pakning af runtime, toolmanifest, biblioteker og licenser.
+Den eksisterende isolerede motor kan vise Afvis som en kontrolleret afbrudt/fejlet
+opgave. Prøven kontrollerer, at handlingen ikke udføres; den ændrer ikke appens
+eksisterende fejlklassifikation eller UI i denne integration.
 
-Disse app-specifikke trin er ikke udført i denne første katalog- og toolafprøvning.
+## Kvalifikation
+
+`desktop/scripts/verify-local-tools.cjs` starter den rigtige app i en separat
+syntetisk profil og bruger de eksisterende godkendelses- og delingsknapper.
+Den virker også mod en eksplicit `HARNESS_TEST_PACKAGE`; pakkekontrollen må
+ikke falde tilbage til kildeappen. Prøven bruger ingen brugercredentials eller
+betalte modelkald. `desktop/tests/local-tools.test.cjs` dækker bindingsregler,
+betroet pluginoprettelse og opt-in native tilladelse, afvisning og Stop.
+
+Kør fra repositoryets rod:
+
+```sh
+AURA_ENGINE_NATIVE=1 desktop/.runtime/darwin-arm64/node/bin/node --test desktop/tests/local-tools.test.cjs
+desktop/.runtime/darwin-arm64/node/bin/node desktop/scripts/verify-local-tools.cjs
+```
+
+En installeret brugerapp, en publiceret release eller en test mod en ekstern AI
+kræver sit eget konkrete leverancebevis; native loopback-afprøvning er ikke bevis
+for en bestemt betalt models værktøjsvalg.

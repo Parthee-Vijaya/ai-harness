@@ -1,0 +1,14 @@
+import { build } from 'esbuild';
+import fs from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+const destination = new URL('../../desktop/core/local-tools-plugin.mjs', import.meta.url);
+const result = await build({ entryPoints: [new URL('./desktop-plugin-entry.mjs', import.meta.url).pathname], bundle: true, platform: 'node', target: 'node22', format: 'esm', external: ['effect', 'node:crypto'], minify: true, legalComments: 'external', write: false, outfile: destination.pathname });
+const code = result.outputFiles.find(file => file.path.endsWith('.mjs')).contents;
+const license = result.outputFiles.find(file => file.path.endsWith('.LEGAL.txt'))?.contents;
+await fs.writeFile(destination, code);
+const notices = [];
+if (license) notices.push(Buffer.from(license).toString('utf8'));
+for (const name of ['csv-parse', 'csv-stringify', 'diff', 'ibantools', 'zod']) notices.push(`${name}\n${await fs.readFile(new URL(`./node_modules/${name}/LICENSE`, import.meta.url), 'utf8')}`);
+await fs.writeFile(new URL('../../desktop/core/local-tools-plugin.LICENSE.txt', import.meta.url), notices.join('\n\n'));
+await fs.writeFile(new URL('../../desktop/core/local-tools-integrity.json', import.meta.url), JSON.stringify({ schemaVersion: 1, version: '0.1.0', sha256: createHash('sha256').update(code).digest('hex') }, null, 2) + '\n');
+console.log(JSON.stringify({ bytes: code.length, bundled: true, external: ['effect', 'node:crypto'] }));

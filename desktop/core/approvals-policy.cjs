@@ -9,6 +9,7 @@ const digest = value => createHash('sha256').update(JSON.stringify(value)).diges
 const within = (root, target) => { const relative = path.relative(root, target); return relative === '' || (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative)); };
 const stable = value => Array.isArray(value) ? value.map(stable) : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map(key => [key, stable(value[key])])) : value;
 const { isProtected: protectedPath } = require('./protected-paths.cjs');
+const localTools = require('./local-tools.cjs');
 const writable = mode => ['free', 'build'].includes(mode);
 
 // realpath på den nærmeste eksisterende forælder dækker også nye filer. Et link
@@ -146,7 +147,13 @@ class ApprovalsPolicy {
     try {
       const project = await directory(context.projectRoot), workspace = await directory(context.workspaceRoot);
       let match, identity = null;
-      if (kind === 'bash') {
+      if (localTools.ids.includes(kind)) {
+        match = localTools.permissionBinding(p);
+        descriptor.label = 'Lokalt tool: ' + kind;
+        descriptor.target = (p.patterns || []).join('\n');
+        // Every call is reviewed once; no YOLO or stored broad tool grants.
+        descriptor.persistable = false;
+      } else if (kind === 'bash') {
         const command = p.toolInput?.command || p.metadata?.command;
         if (typeof command !== 'string' || !command.trim() || command.length > 32000 || command.includes('\0')) throw new Error('Kommandoen mangler.');
         const cwd = await directory(p.toolInput?.workdir || p.metadata?.workdir || workspace);

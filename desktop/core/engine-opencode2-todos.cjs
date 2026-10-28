@@ -19,7 +19,7 @@ export default { id: "aura.task-list.compatibility", async setup(ctx) {
   await ctx.tool.transform(editor => {
     // V2 adds unapproved session/worktree management through code mode. Aura
     // keeps its existing host controls and exposes only its established tools.
-    const allowed = new Set(["read", "write", "edit", "patch", "glob", "grep", "shell", "webfetch", "question", "skill"]);
+    const allowed = new Set(["read", "write", "edit", "patch", "glob", "grep", "shell", "webfetch", "question", "skill", "aura_json_to_csv", "aura_csv_to_json", "aura_text_diff", "aura_validate_iban"]);
     for (const tool of editor.list()) if (!allowed.has(tool.name) || tool.options?.namespace) editor.remove(tool.id);
     // Keep the released shell executor/permission path, but never acquire V2
     // background jobs that could write or wake a model after Aura's turn ends.

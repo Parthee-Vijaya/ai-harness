@@ -12,6 +12,7 @@ const { setTimeout: delay } = require('node:timers/promises');
 const VERSION = '2.1.4';
 const v2 = require('./engine-opencode2.cjs');
 const taskTools = require('./engine-opencode2-todos.cjs');
+const localTools = require('./local-tools.cjs');
 const protectedPaths = require('./protected-paths.cjs');
 const { localMetrics, RunMeasurement } = require('./run-metrics.cjs');
 const parseOpenCodeVersion = value => /^(?:opencode v)?(\d+\.\d+\.\d+)\s*$/.exec(String(value).trim())?.[1] || null;
@@ -55,10 +56,11 @@ function permissions(root, references, mode = 'free', skills = null) {
     // Kun de skills, brugerens funktioner har slået til, kan hentes. OpenCodes egne skills er skjult.
     skill = { '*': 'deny', ...Object.fromEntries(skills.names.map(name => [name, 'allow'])) };
   }
-  if (['chat', 'plan'].includes(mode)) return { '*': 'deny', read, glob: 'allow', list: 'allow', grep: 'ask', webfetch: 'ask', external_directory: external, skill, question: 'allow' };
+  const localPermissions = Object.fromEntries(localTools.ids.map(id => [id, 'ask']));
+  if (['chat', 'plan'].includes(mode)) return { '*': 'deny', read, glob: 'allow', list: 'allow', grep: 'ask', webfetch: 'ask', external_directory: external, skill, question: 'allow', ...localPermissions };
   const edit = { '*': 'ask', ...Object.fromEntries(protectedPaths.toOpenCodeGlobs().map(pattern => [pattern, 'deny'])) };
   if (skills?.names.length) edit[skillPattern(skills.directory)] = 'deny';
-  return { '*': 'ask', read, glob: 'allow', grep: 'ask', list: 'allow', edit, bash: 'ask', external_directory: external, webfetch: 'ask', websearch: 'deny', task: 'deny', skill, lsp: 'deny', question: 'allow', todowrite: 'allow', todoread: 'allow' };
+  return { '*': 'ask', read, glob: 'allow', grep: 'ask', list: 'allow', edit, bash: 'ask', external_directory: external, webfetch: 'ask', websearch: 'deny', task: 'deny', skill, lsp: 'deny', question: 'allow', todowrite: 'allow', todoread: 'allow', ...localPermissions };
 }
 // Motorens skillmappe skrives forfra ved hver start, så en fravalgt skill eller en gammel tilpasning ikke bliver liggende.
 async function writeSkills(directory, skills) {
@@ -368,7 +370,9 @@ class OpenCodeEngine {
     }
     const taskPlugin = path.join(this.directory, 'task-tools');
     await taskTools.writeTrustedAsset(taskPlugin);
-    const plugins = [readGuard.pluginURL, taskPlugin, ...(this.sandbox ? [this.sandbox.pluginURL] : [])];
+    const localPlugin = path.join(this.directory, 'local-tools');
+    await localTools.writeTrustedAsset(localPlugin);
+    const plugins = [readGuard.pluginURL, taskPlugin, localPlugin, ...(this.sandbox ? [this.sandbox.pluginURL] : [])];
     this.config = v2.nativeConfig(engineConfig(this.provider, this.model, permission), plugins);
     if (/\{(?:env|file):/.test(JSON.stringify(this.config))) throw new Error('Konfigurationen indeholder en ikke tilladt variabelhenvisning.');
     // Terminalklienten styrer Stop via API'et; dens Ctrl+C må ikke også ramme motorens procesgruppe.
@@ -430,7 +434,7 @@ class OpenCodeEngine {
       const effective = await this.wire(`/api/config?location[directory]=${encodeURIComponent(this.root)}`);
       if (!v2.validateConfigEntries(effective, this.config, this.directory)) throw new Error('Agentens effektive indstillinger afviger. En lokal eller administreret konfiguration kan være årsagen.');
       await this.openSession();
-      const expectedPlugins = new Map([['aura.read-protection', readGuard.pluginURL], ['aura.task-list.compatibility', taskPlugin], ...(this.sandbox ? [['aura.command-isolation', this.sandbox.pluginURL]] : [])]);
+      const expectedPlugins = new Map([['aura.read-protection', readGuard.pluginURL], ['aura.task-list.compatibility', taskPlugin], ['aura.local-tools', localPlugin], ...(this.sandbox ? [['aura.command-isolation', this.sandbox.pluginURL]] : [])]);
       const deadline = Date.now() + 10000;
       while (true) {
         const installed = await this.wire(`/api/plugin?location[directory]=${encodeURIComponent(this.root)}`);

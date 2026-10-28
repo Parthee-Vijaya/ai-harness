@@ -32,7 +32,7 @@ Når en bruger henter en instruktionspakke til sit eget kodeværktøj, bruger ve
 
 ## Hvilke dele af oplægget mangler?
 
-Oplæggets samlede organisationsstyring, verificerede identiteter i revisionssporet, faste sikkerheds- og arkitekturagenter og fælles afprøvning på tværs af værktøjer er ikke implementeret. MCP-servere, OpenCode-plugins og delegerede agentopgaver er slået fra i den aktuelle motorkonfiguration.
+Oplæggets samlede organisationsstyring, verificerede identiteter i revisionssporet, faste sikkerheds- og arkitekturagenter og fælles afprøvning på tværs af værktøjer er ikke implementeret. Eksterne MCP-servere, brugertilføjede plugins og delegerede agentopgaver er slået fra. Appens egne betroede plugins leverer blandt andet de fire [lokale tools](local-tools.md), som er integreret 28. oktober 2026.
 
 Der findes konkrete programkontroller, blandt andet godkendelse af kommandoer og kontrol af den valgte modelkonfiguration. Men arbejdsområdet er ikke en fuldt isoleret sandbox: en godkendt kommando kan køre med brugerens rettigheder. Elektrons isolation af brugerfladen er en anden grænse end isolation af kodeagenten og dens underprocesser. Grundregler er instruktioner og kan ikke erstatte netværks- eller filadgangskontrol.
 

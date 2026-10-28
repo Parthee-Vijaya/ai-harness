@@ -8,6 +8,7 @@ function names(version) {
 }
 function allowedSource(name) {
   return /^(LICENSE|README\.md|package\.json|cli\/[\w-]+\.(cjs|md)|desktop\/core\/(?:privacy\/)?[\w-]+\.cjs|desktop\/privacy\/isolation\/[\w-]+\.(cjs|c)|desktop\/ui\/(?:conversation-mode|plan-view)\.js|desktop\/runtime-lock\.json|scripts\/harness\.cjs)$/.test(name)
+    || /^desktop\/core\/local-tools-(?:plugin\.mjs|plugin\.LICENSE\.txt|integrity\.json)$/.test(name)
     || /^profiles\/[a-zA-Z0-9_/-]+\.(md|json|txt)$/.test(name);
 }
 // Læs de faktiske npm-arkivfiler uden at udpakke eller udføre dem.

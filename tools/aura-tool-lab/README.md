@@ -1,7 +1,8 @@
 # Aura Tool Lab
 
-Første afprøvning af Apyhub og fire lokale tools til Aura Harness. Pakken ligger i
-Aura-forken, men ændrer ikke desktopappen, dens motorindstillinger eller UI.
+Afprøvning af Apyhub og fire lokale tools til Aura Harness. De lokale tools er nu
+integreret i desktopmotoren gennem Auras egne godkendelser og Privacy Gate.
+UI-filerne er uændrede.
 
 ## Verificeret 28. oktober 2026
 
@@ -15,9 +16,10 @@ Aura-forken, men ændrer ikke desktopappen, dens motorindstillinger eller UI.
   tools består desuden under macOS-sandbox med netværk og filskrivning afvist.
 - Afhængigheder er låst; `npm audit --omit=dev` viste nul kendte sårbarheder.
 
-Dette er en afgrænset prototype. Fem cases dokumenterer disse eksempler, ikke
+Dette er en afgrænset toolpakke. Fem cases dokumenterer disse eksempler, ikke
 fuld funktionel lighed, en generel ydelsesmåling eller produktionskvalifikation.
-Der er ikke installeret en ny Aura-app, bygget en DMG eller lavet en release.
+Desktopintegrationen har sin egen native afprøvning. En lokal installationspakke
+kvalificeres separat; denne opgave offentliggør ikke en GitHub-release.
 
 ## Lokale tools
 
@@ -108,11 +110,23 @@ billeder, kalenderfiler og eksterne registre er endnu ikke afprøvet i denne run
 
 ## Aura-integration
 
-Aura-forkens aktuelle motor bruger et tomt MCP-katalog. Pakken er derfor
-**MCP-kvalificeret som separat proces, men endnu ikke aktiveret i Aura Desktop**.
-Se [`desktop-integration.md`](desktop-integration.md) for koblingen gennem
-appens hovedproces, godkendelser og Privacy Gate. Denne prototype ændrer ikke
-`desktop/core/engine.cjs`, `engine-opencode2.cjs` eller `approvals-policy.cjs`.
+Aura indlæser de fire tools som en fast, bundlet plugin gennem sin betroede
+motorvej. Eksterne MCP-servere forbliver slået fra. Hvert kald kræver en konkret
+enkeltgodkendelse bundet til inputhash og toolversion. Ingen globale toolregler
+eller nye UI-kontroller er indført. Se [desktop-integration.md](desktop-integration.md).
+
+Native afprøvning bruger rigtig Electron, preload, IPC, OpenCode 2.1.4 og
+Privacy Gate i en separat syntetisk profil. Den kontrollerede model kører på
+loopback; prøven dokumenterer appintegrationen og kræver ingen betalt model.
+
+I lokal tilstand forbliver følsomme tooldata hos den dokumenterede lokale model.
+Ved en cloudmodel skal resultat og toolhistorik gennem Privacy Gate før næste
+modelkald. Strukturdata med fx IBAN eller mailadresse kan kræve lokal behandling;
+Godkend én gang ophæver ikke denne grænse.
+
+Genbyg den faste desktopplugin med `node build-desktop-plugin.mjs` fra denne
+mappe. Den er selvstændigt bundlet, har en SHA-256-kontrol og medfølgende
+bibliotekslicenser. Appen downloader eller installerer ingen toolpakker ved start.
 
 ## Afhængigheder og kilder
 

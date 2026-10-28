@@ -16,7 +16,7 @@
     "@opencode/cli-linux-x64-baseline": "2.1.4",
     "@opencode/cli-linux-x64-baseline-musl": "2.1.4"
   },
-  "files": ["cli/*.cjs", "cli/*.md", "desktop/core/*.cjs", "desktop/core/privacy/*.cjs", "desktop/privacy/isolation/*.cjs", "desktop/privacy/isolation/*.c", "desktop/ui/conversation-mode.js", "desktop/ui/plan-view.js", "desktop/runtime-lock.json", "profiles/", "scripts/harness.cjs", "LICENSE"],
+  "files": ["cli/*.cjs", "cli/*.md", "desktop/core/*.cjs", "desktop/core/local-tools-*", "desktop/core/privacy/*.cjs", "desktop/privacy/isolation/*.cjs", "desktop/privacy/isolation/*.c", "desktop/ui/conversation-mode.js", "desktop/ui/plan-view.js", "desktop/runtime-lock.json", "profiles/", "scripts/harness.cjs", "LICENSE"],
   "scripts": {
     "check": "node scripts/check.cjs",
     "package:cli": "node scripts/build-cli-release.cjs",
