@@ -5,6 +5,8 @@ const path = require('node:path');
 const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '../ui/app.js'), 'utf8');
 const handler = source.slice(source.indexOf('// Låsen tilhører samtalen'), source.indexOf("$('#stop').onclick"));
+// Idéen som første besked: knappen, kortet med det ene spørgsmål og de to svar.
+const ideaSource = source.slice(source.indexOf('function updateStartIdea()'), source.indexOf("$('#model-select').addEventListener('change', updateModelSummary)"));
 function fixture() {
   const elements = new Map();
   const $ = selector => {
@@ -57,15 +59,44 @@ test('et sent prepare-svar fra en anden samtale sender aldrig i den nye', async 
 
 test('projektidéen forberedes i Byg og bevarer brugerens udtrykkelige valg af Planlæg', () => {
   const f = fixture(); f.context.current.purpose = 'Byg en lille hjemmeside med en blomst'; f.context.featureOn = () => false;
-  vm.runInContext(source.slice(source.indexOf('function updateStartIdea()'), source.indexOf("$('#model-select').addEventListener('change', updateModelSummary)")), f.context);
+  vm.runInContext(ideaSource, f.context);
   f.$('#prompt').value = ''; f.$('#start-idea').onclick();
   assert.equal(f.$('#work-mode').value, 'free'); assert.equal(f.$('#prompt').value, f.context.current.purpose); assert.equal(f.prepared.length, 0);
+  // Uden planlægning er der intet at vælge imellem, og kortet står ikke.
+  assert.equal(f.$('#idea-approach').hidden, true);
   f.$('#prompt').value = ''; f.context.view.modeChosen = true; f.$('#work-mode').value = 'plan'; f.$('#start-idea').onclick();
   assert.equal(f.$('#work-mode').value, 'plan'); assert.equal(f.prepared.length, 0);
 });
 
+test('idéen får ét spørgsmål, og først et svar flytter arbejdsmåden', () => {
+  const prepare = () => {
+    const f = fixture(); f.context.current.purpose = 'En oversigt over tre fiktive mødelokaler';
+    f.context.featureOn = id => id === 'planlaegning';
+    vm.runInContext(ideaSource, f.context);
+    f.$('#prompt').value = ''; f.$('#start-idea').onclick();
+    return f;
+  };
+  // Kortet står med spørgsmålet, og indtil der svares, bliver idéen i Byg.
+  const planlaeg = prepare();
+  assert.equal(planlaeg.$('#idea-approach').hidden, false); assert.equal(planlaeg.$('#work-mode').value, 'free');
+  assert.equal(planlaeg.context.view.modeChosen, undefined); assert.equal(planlaeg.prepared.length, 0);
+  planlaeg.$('#plan-idea-first').onclick();
+  assert.equal(planlaeg.$('#work-mode').value, 'plan'); assert.equal(planlaeg.context.view.modeChosen, true);
+  assert.equal(planlaeg.$('#idea-approach').hidden, true); assert.equal(planlaeg.prepared.length, 0);
+  // Det andet svar bliver i Byg og lukker spørgsmålet på samme måde.
+  const byg = prepare(); byg.$('#build-idea-now').onclick();
+  assert.equal(byg.$('#work-mode').value, 'free'); assert.equal(byg.context.view.modeChosen, true);
+  assert.equal(byg.$('#idea-approach').hidden, true);
+  // Tømmes feltet, er spørgsmålet ovre, og et svar kan ikke gives under en opgave.
+  const tomt = prepare(); tomt.$('#prompt').value = ''; tomt.context.updateIdeaApproach();
+  assert.equal(tomt.$('#idea-approach').hidden, true);
+  const koerer = prepare(); koerer.context.running = true; koerer.$('#plan-idea-first').onclick();
+  assert.equal(koerer.$('#work-mode').value, 'free'); assert.equal(koerer.context.view.modeChosen, undefined);
+});
+
 test('manuelt skift til Byg medtager samtalen også uden en særlig byggebesked', () => {
   const f = fixture();
+  vm.runInContext(ideaSource, f.context);
   vm.runInContext(source.slice(source.indexOf('function updateWorkMode()'), source.indexOf("$('#composer-mode').onclick")), f.context);
   for (const previous of ['chat', 'plan']) {
     f.$('#work-mode').value = previous; f.context.updateWorkMode(); f.$('#include-history').checked = false;

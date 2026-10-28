@@ -882,12 +882,12 @@ function applyRunning() {
   $('#copy-wait').hidden = !current?.isolated || running || !mainRunning;
   const value = projectLoading;
   for (const selector of ['#new', '#open', '#connections-button', '#skills-button', '#features-button', '#publish-button', '#setup-hosting', '#deploy-button', '#intro-button']) $(selector).disabled = value;
-  for (const selector of ['#composer-mode', '#accept-plan-offer', '#work-mode', '#build-plan', '#revise-plan', '#start-idea']) $(selector).disabled = running;
+  for (const selector of ['#composer-mode', '#accept-plan-offer', '#work-mode', '#build-plan', '#revise-plan', '#start-idea', '#plan-idea-first', '#build-idea-now']) $(selector).disabled = running;
   for (const selector of ['#model-chip', '#model-load', '#model-search', '#connection-select', '#model-select', '#route-select']) $(selector).disabled = projectLoading;
   for (const button of document.querySelectorAll('#model-shortlist button')) button.disabled = projectLoading;
   $('#task-next-note').hidden = !running;
   $('#include-history').disabled = running;
-  setupControls();
+  setupControls(); updateIdeaApproach();
   renderStatus(); window.previewEdit?.available();
 }
 function showSkill() {
@@ -1230,9 +1230,29 @@ $('#start-idea').onclick = () => {
   // Med planlægning kommer ønskerne i projektbriefen, som følger med hver besked. Uden står de i beskeden som før.
   const inBrief = featureOn('planlaegning') && wishes.length;
   $('#prompt').value = `${current?.purpose || '[beskriv din idé her]'}${wishes.length && !inBrief ? '\n\nMine ønsker:\n' + wishes.map(w => `${w.label}: ${w.value}`).join('\n') : ''}`;
-  saveChatDraft(); updateStartIdea(); $('#prompt').focus();
+  // Ét spørgsmål, lige når idéen står i feltet: skal den planlægges først, eller bygges med det samme? Vi anbefaler
+  // at planlægge, fordi spørgsmålene så stilles ét ad gangen og planen kan rettes, før noget bygges. Valget er
+  // brugerens: indtil der svares, gælder arbejdsmåden ovenfor, og har brugeren selv valgt en, spørges der ikke.
+  view.ideaApproach = featureOn('planlaegning') && !view.modeChosen;
+  saveChatDraft(); updateStartIdea(); updateIdeaApproach(); $('#prompt').focus();
   if (inBrief) action(async () => { await window.planning.addWishes(wishes); message('Dine ønsker står i projektbriefen under Plan.'); });
 };
+// Kortet står kun, mens idéen ligger urørt i skrivefeltet og samtalen ikke er begyndt. Tømmes feltet, svares der,
+// eller sendes beskeden, er spørgsmålet ovre, og arbejdsmåden ændres kun af brugeren selv.
+function updateIdeaApproach(v = view) {
+  if (v.log?.children.length || v.running) v.ideaApproach = false;
+  if (v !== view) return;
+  if (!$('#prompt').value.trim()) v.ideaApproach = false;
+  $('#idea-approach').hidden = !v.ideaApproach;
+}
+const chooseIdeaApproach = mode => {
+  if (running) return;
+  view.ideaApproach = false; updateIdeaApproach();
+  $('#work-mode').value = mode; view.modeChosen = true; acceptedFingerprint = null;
+  updateWorkMode(); saveChatDraft(); $('#prompt').focus();
+};
+$('#plan-idea-first').onclick = () => chooseIdeaApproach('plan');
+$('#build-idea-now').onclick = () => chooseIdeaApproach('free');
 $('#model-select').addEventListener('change', updateModelSummary);
 
 $('#model-done').onclick = () => { if (!$('#connection-select').value || !$('#model-select').value || (!$('#route-row').hidden && !$('#route-select').value)) { message('Vælg en forbindelse, model og eventuel udbyder først.', true); return; } updateModelSummary(); $('#model-options').open = false; $('#task-dialog').close(); $('#prompt').focus(); };
@@ -1785,6 +1805,7 @@ function updateWorkMode() {
 $('#work-mode').onchange = () => {
   if (['chat', 'plan'].includes(view.composerMode) && ['free', 'build'].includes($('#work-mode').value)) $('#include-history').checked = true;
   view.modeChosen = true; acceptedFingerprint = null; updateWorkMode();
+  view.ideaApproach = false; updateIdeaApproach();
   if ($('#work-mode').value === 'chat') { view.planCard = false; $('#plan-card').hidden = true; }
 };
 $('#composer-mode').onclick = () => { $('#task-dialog').showModal(); $('#task-dialog .workflow').open = true; $('#work-mode').focus(); };
@@ -1974,7 +1995,7 @@ $('#local-discovery-use').onclick = () => action(async () => {
 });
 
 $('#prompt').addEventListener('input', () => {
-  updateStartIdea();
+  updateStartIdea(); updateIdeaApproach();
   if (!current || !view.id) return;
   // Kladden gemmes straks lokalt for samtalen, så den også findes, hvis appen lukkes, før den er skrevet til samtalefilen.
   try { localStorage.setItem(`harness.chatDraft.${current.root}.${view.id}`, JSON.stringify({ text: $('#prompt').value, mode: $('#work-mode').value })); } catch {}

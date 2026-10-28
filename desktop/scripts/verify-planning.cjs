@@ -98,9 +98,16 @@ const questions = [
     await helpers.addConnection(page, { name: 'Kontrolleret plan', baseURL: `http://127.0.0.1:${server.address().port}/v1` });
     const connection = (await page.evaluate(() => window.harness.connectionState())).value.connections[0].id;
     await helpers.taskOptions(page); await page.selectOption('#connection-select', connection); await page.locator('#model-shortlist button').first().click();
-    // Et nyt projekt starter i Byg; se DESIGN.md. Prøvens afklaring og plan kræver Planlæg.
+    // Et nyt projekt starter i Byg; se DESIGN.md. Idéens ene spørgsmål vælger Planlæg, og intet skifter af sig selv.
     assert.equal(await page.inputValue('#work-mode'), 'free');
-    await helpers.selectMode(page, 'plan');
+    await helpers.closeTaskOptions(page);
+    assert.equal(await page.locator('#idea-approach p').first().textContent(), 'Skal vi planlægge din idé først?');
+    assert.deepEqual(await page.locator('#idea-approach button').allTextContents(), ['Planlæg først (anbefalet)', 'Byg med det samme']);
+    await page.screenshot({ path: path.join(root, 'idevalg.png'), animations: 'disabled' });
+    await page.click('#plan-idea-first');
+    assert.equal(await page.isVisible('#idea-approach'), false);
+    assert.equal(await page.inputValue('#work-mode'), 'plan');
+    passed('Idéen får ét spørgsmål med to valg, og Planlæg først sætter arbejdsmåden');
 
     // Første besked: Før du sender viser briefen under alle oplysninger.
     await page.click('#send'); await page.waitForSelector('#data-dialog[open]');
