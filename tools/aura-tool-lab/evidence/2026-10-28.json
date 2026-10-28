@@ -1,0 +1,79 @@
+{
+  "date": "2026-10-28",
+  "endpoint": "https://mcp.eu.apyhub.com",
+  "connectedAgent": "Aura Tool Lab",
+  "observedMcpTools": [
+    "curated_apis",
+    "search_apis",
+    "get_api_spec",
+    "call_api"
+  ],
+  "externalExecutionCalls": 5,
+  "listedAtomsTotal": 110,
+  "actualBillingVerified": false,
+  "apiRetryCalls": 0,
+  "cases": [
+    {
+      "caseId": "csv-to-json-danish",
+      "remoteStatus": "passed",
+      "localStatus": "passed",
+      "listedAtoms": 10,
+      "remoteLatencyMs": 681,
+      "recorderCorrection": false
+    },
+    {
+      "caseId": "iban-invalid",
+      "remoteStatus": "passed",
+      "localStatus": "passed",
+      "listedAtoms": 5,
+      "remoteLatencyMs": 98,
+      "recorderCorrection": false
+    },
+    {
+      "caseId": "iban-valid",
+      "remoteStatus": "passed",
+      "localStatus": "passed",
+      "listedAtoms": 5,
+      "remoteLatencyMs": 102,
+      "recorderCorrection": false
+    },
+    {
+      "caseId": "json-to-csv-danish",
+      "remoteStatus": "passed",
+      "localStatus": "passed",
+      "listedAtoms": 50,
+      "remoteLatencyMs": 73,
+      "recorderCorrection": true
+    },
+    {
+      "caseId": "text-diff-danish",
+      "remoteStatus": "passed",
+      "localStatus": "passed",
+      "listedAtoms": 40,
+      "remoteLatencyMs": 75,
+      "recorderCorrection": false
+    }
+  ],
+  "localMcpBoundary": "real-stdio-subprocess",
+  "unitTests": {
+    "passed": 18,
+    "failed": 0
+  },
+  "macOSSandboxTests": {
+    "passed": 8,
+    "failed": 0,
+    "denied": [
+      "network",
+      "file-write"
+    ]
+  },
+  "dependencyAudit": {
+    "knownVulnerabilities": 0
+  },
+  "auraDesktopEnabled": false,
+  "limitations": [
+    "Five fixed fixtures, not full vendor parity",
+    "JSON-to-CSV revalidated from the recorded live response after recorder correction; original report preserved",
+    "No installed Aura or DMG qualification in this task"
+  ]
+}

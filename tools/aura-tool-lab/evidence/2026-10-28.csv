@@ -1,0 +1,6 @@
+"caseId","remoteStatus","localStatus","listedAtoms","remoteLatencyMs","recorderCorrection"
+"csv-to-json-danish","passed","passed","10","681","false"
+"iban-invalid","passed","passed","5","98","false"
+"iban-valid","passed","passed","5","102","false"
+"json-to-csv-danish","passed","passed","50","73","true"
+"text-diff-danish","passed","passed","40","75","false"

@@ -1,0 +1,273 @@
+[
+  {
+    "service": "validate-iban",
+    "endpoint": "validate-an-iban",
+    "observedAt": "2026-10-28T19:45:40.310Z",
+    "provider": "apyhub",
+    "atoms": 5,
+    "inputSchema": {
+      "type": "object",
+      "required": [
+        "body"
+      ],
+      "properties": {
+        "body": {
+          "type": "object",
+          "required": [
+            "iban"
+          ],
+          "properties": {
+            "iban": {
+              "type": "string",
+              "example": "FR7630006000011234567890189",
+              "description": "The IBAN to validate."
+            }
+          },
+          "x-location": "body"
+        }
+      }
+    },
+    "outputSchema": {
+      "type": "object",
+      "required": [
+        "data"
+      ],
+      "properties": {
+        "data": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "bban": {
+                  "type": "string"
+                },
+                "iban": {
+                  "type": "string"
+                },
+                "valid": {
+                  "type": "boolean"
+                },
+                "country_code": {
+                  "type": "string"
+                },
+                "sepa_country": {
+                  "type": "boolean"
+                },
+                "printable_format": {
+                  "type": "string"
+                }
+              }
+            },
+            {
+              "type": "boolean",
+              "description": "false when IBAN is invalid."
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "service": "compare-text-or-code-snippets",
+    "endpoint": "compare-two-text-or-code-snippets",
+    "observedAt": "2026-10-28T19:45:47.202Z",
+    "provider": "apyhub",
+    "atoms": 40,
+    "inputSchema": {
+      "type": "object",
+      "required": [
+        "body"
+      ],
+      "properties": {
+        "body": {
+          "type": "object",
+          "required": [
+            "text1",
+            "text2"
+          ],
+          "properties": {
+            "mode": {
+              "enum": [
+                "char",
+                "word",
+                "line"
+              ],
+              "type": "string",
+              "default": "word",
+              "description": "Comparison granularity. char for typos / short strings, word for sentences and paragraphs (default), line for code, configs, and other multi-line content.\n"
+            },
+            "text1": {
+              "type": "string",
+              "example": "I love eating apples",
+              "description": "Original text or code snippet. Capped at 1 MiB."
+            },
+            "text2": {
+              "type": "string",
+              "example": "I love eating oranges",
+              "description": "New text or code snippet. Capped at 1 MiB."
+            }
+          },
+          "x-location": "body"
+        }
+      }
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "required": [
+            "mode",
+            "diffs",
+            "stats"
+          ],
+          "properties": {
+            "mode": {
+              "enum": [
+                "char",
+                "word",
+                "line"
+              ],
+              "type": "string",
+              "description": "Normalised mode actually used to compute the diff."
+            },
+            "diffs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "op",
+                  "text"
+                ],
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "equal",
+                      "insert",
+                      "delete"
+                    ],
+                    "type": "string",
+                    "description": "`equal` segments appear in both inputs, `delete` segments exist only in `text1`, and `insert` segments exist only in `text2`.\n"
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "Verbatim segment content in the chosen mode."
+                  }
+                }
+              },
+              "description": "Ordered diff segments. Concatenating `equal+delete` recovers `text1`; `equal+insert` recovers `text2`."
+            },
+            "stats": {
+              "type": "object",
+              "required": [
+                "additions",
+                "deletions",
+                "unchanged"
+              ],
+              "properties": {
+                "additions": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Units inserted in `text2` (counted in the chosen mode)."
+                },
+                "deletions": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Units removed from `text1` (counted in the chosen mode)."
+                },
+                "unchanged": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Units present in both inputs (counted in the chosen mode)."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "service": "json-to-csv",
+    "endpoint": "convert-raw-json-body-to-csv-inline-resp",
+    "observedAt": "2026-10-28T19:45:54.177Z",
+    "provider": "apyhub",
+    "atoms": 50,
+    "inputSchema": {
+      "type": "object",
+      "required": [
+        "body"
+      ],
+      "properties": {
+        "body": {
+          "oneOf": [
+            {
+              "type": "object",
+              "minProperties": 1,
+              "additionalProperties": true
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "minItems": 1
+            }
+          ],
+          "x-location": "body",
+          "description": "A JSON object or a non-empty array of JSON objects to convert."
+        }
+      }
+    },
+    "outputSchema": {
+      "type": "string"
+    }
+  },
+  {
+    "service": "raw-csv-to-json",
+    "endpoint": "convert-a-csv-string-to-a-json-array-of",
+    "observedAt": "2026-10-28T19:45:54.172Z",
+    "provider": "dosvak",
+    "atoms": 10,
+    "inputSchema": {
+      "type": "object",
+      "required": [
+        "body"
+      ],
+      "properties": {
+        "body": {
+          "type": "object",
+          "required": [
+            "csv"
+          ],
+          "properties": {
+            "csv": {
+              "type": "string",
+              "example": "name,age\nAlice,30\nBob,25"
+            },
+            "delimiter": {
+              "type": "string",
+              "default": ","
+            }
+          },
+          "x-location": "body"
+        }
+      }
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "count": {
+          "type": "integer"
+        }
+      }
+    }
+  }
+]

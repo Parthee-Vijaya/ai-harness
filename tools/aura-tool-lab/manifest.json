@@ -1,0 +1,376 @@
+{
+  "schemaVersion": 1,
+  "package": "@aura/tool-lab",
+  "version": "0.1.0",
+  "tools": [
+    {
+      "name": "aura_json_to_csv",
+      "title": "JSON til CSV",
+      "description": "Konvertér flade JSON-rækker til CSV i hukommelsen. Bevarer rækkefølge og danske tegn. Formellignende tekstceller beskyttes som standard; escapedCells angiver ændringerne.",
+      "version": "0.1.0",
+      "execution": "local",
+      "dataEgress": "none",
+      "filesystem": "none",
+      "maxInputBytes": 262144,
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "rows": {
+            "minItems": 1,
+            "maxItems": 10000,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "pattern": "^(?!(?:__proto__|constructor|prototype)$)[\\s\\S]+$"
+              },
+              "additionalProperties": {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean",
+                  "null"
+                ]
+              }
+            }
+          },
+          "delimiter": {
+            "default": ",",
+            "type": "string",
+            "enum": [
+              ",",
+              ";",
+              "\t"
+            ]
+          },
+          "spreadsheetSafe": {
+            "default": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "rows",
+          "delimiter",
+          "spreadsheetSafe"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "csv": {
+            "type": "string"
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "spreadsheetSafe": {
+            "type": "boolean"
+          },
+          "escapedCells": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "csv",
+          "columns",
+          "count",
+          "spreadsheetSafe",
+          "escapedCells"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "aura_csv_to_json",
+      "title": "CSV til JSON",
+      "description": "Læs CSV med komma, semikolon eller tabulator, danske tegn, citationstegn og linjeskift. Alle celleværdier bevares som tekst; dublerede kolonnenavne afvises.",
+      "version": "0.1.0",
+      "execution": "local",
+      "dataEgress": "none",
+      "filesystem": "none",
+      "maxInputBytes": 262144,
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "csv": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 262144
+          },
+          "delimiter": {
+            "default": ",",
+            "type": "string",
+            "enum": [
+              ",",
+              ";",
+              "\t"
+            ]
+          }
+        },
+        "required": [
+          "csv",
+          "delimiter"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "data",
+          "columns",
+          "count"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "aura_text_diff",
+      "title": "Sammenlign tekst",
+      "description": "Sammenlign to tekster på tegn-, ord- eller linjeniveau. Returnerer ændringer, der kan genskabe begge originaltekster. Højst 256 KiB input og 250 ms beregning.",
+      "version": "0.1.0",
+      "execution": "local",
+      "dataEgress": "none",
+      "filesystem": "none",
+      "maxInputBytes": 262144,
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "text1": {
+            "type": "string",
+            "maxLength": 262144
+          },
+          "text2": {
+            "type": "string",
+            "maxLength": 262144
+          },
+          "mode": {
+            "default": "word",
+            "type": "string",
+            "enum": [
+              "char",
+              "word",
+              "line"
+            ]
+          }
+        },
+        "required": [
+          "text1",
+          "text2",
+          "mode"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "char",
+                  "word",
+                  "line"
+                ]
+              },
+              "diffs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "op": {
+                      "type": "string",
+                      "enum": [
+                        "equal",
+                        "insert",
+                        "delete"
+                      ]
+                    },
+                    "text": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "op",
+                    "text"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "stats": {
+                "type": "object",
+                "properties": {
+                  "additions": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "deletions": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "unchanged": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "additions",
+                  "deletions",
+                  "unchanged"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "mode",
+              "diffs",
+              "stats"
+            ],
+            "additionalProperties": false
+          },
+          "counting": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "counting"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "aura_validate_iban",
+      "title": "Kontrollér IBAN-format",
+      "description": "Kontrollér IBAN-struktur og kontrolcifre lokalt. Dokumenterer ikke, om kontoen findes eller hvem der ejer den.",
+      "version": "0.1.0",
+      "execution": "local",
+      "dataEgress": "none",
+      "filesystem": "none",
+      "maxInputBytes": 262144,
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "iban": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "iban"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "type": "boolean",
+                "const": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "valid": {
+                    "type": "boolean",
+                    "const": true
+                  },
+                  "iban": {
+                    "type": "string"
+                  },
+                  "bban": {
+                    "type": "string"
+                  },
+                  "country_code": {
+                    "type": "string"
+                  },
+                  "sepa_country": {
+                    "type": "boolean"
+                  },
+                  "printable_format": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "valid",
+                  "iban",
+                  "bban",
+                  "country_code",
+                  "sepa_country",
+                  "printable_format"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "validationScope": {
+            "type": "string",
+            "const": "structure-and-checksum"
+          },
+          "accountExistenceVerified": {
+            "type": "boolean",
+            "const": false
+          }
+        },
+        "required": [
+          "data",
+          "validationScope",
+          "accountExistenceVerified"
+        ],
+        "additionalProperties": false
+      }
+    }
+  ]
+}

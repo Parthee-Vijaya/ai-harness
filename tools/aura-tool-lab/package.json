@@ -1,0 +1,25 @@
+{
+  "name": "@aura/tool-lab",
+  "version": "0.1.0",
+  "private": true,
+  "license": "EUPL-1.2",
+  "type": "module",
+  "description": "Isoleret Apyhub-afprøvning og MCP-kontrakt for kommende Aura-tools",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "lab": "node cli.mjs",
+    "mcp": "node server.mjs",
+    "verify:local": "node verify-local.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "csv-parse": "7.0.3",
+    "csv-stringify": "6.9.0",
+    "diff": "9.0.0",
+    "ibantools": "4.5.4",
+    "zod": "4.6.7"
+  }
+}
