@@ -5,6 +5,7 @@ const path = require('node:path');
 const os = require('node:os');
 const { randomBytes } = require('node:crypto');
 const { pathToFileURL } = require('node:url');
+const { createStartupRecord } = require('./engine-startup.cjs');
 const run = promisify(execFile);
 // Skal svare til runtime-lock.json, som ikke kommer med i den pakkede app. En unit-test holder de to ens.
 const VERSION = '1.18.33';
@@ -205,13 +206,26 @@ class OpenCodeEngine {
     return this.session;
   }
   async start() {
+    const startup = createStartupRecord({ mode: this.mode, sandbox: Boolean(this.sandbox), detached: this.detached });
+    startup.phase('start');
+    try { const result = await this.startActual(startup); startup.ready(); return result; }
+    catch (error) { startup.fail(error); throw error; }
+    finally { startup.finalize(); }
+  }
+  async startActual(startup) {
+    startup.phase('find-executable');
     const executable = await findExecutable();
+    startup.phase('prepare-dirs');
     await fs.mkdir(this.directory, { recursive: true, mode: 0o700 });
     this.directory = await fs.realpath(this.directory);
     await fs.mkdir(path.join(this.directory, 'home'), { recursive: true, mode: 0o700 });
+    startup.phase('skills');
     await writeSkills(this.directory, this.skills);
+    startup.phase('plugin-runtime');
     await writePluginRuntime(this.directory);
+    startup.phase('read-guard');
     const readGuard = await writeReadGuard(this.directory, this.root, this.references, this.skills);
+    startup.phase('config');
     const password = randomBytes(32).toString('hex');
     this.auth = `Basic ${Buffer.from(`harness:${password}`).toString('base64')}`;
     const permission = permissions(this.root, this.references, this.mode, { directory: this.directory, names: this.skills.map(skill => skill.name) });
@@ -227,6 +241,7 @@ class OpenCodeEngine {
     // Terminalklienten styrer Stop via API'et; dens Ctrl+C må ikke også ramme motorens procesgruppe.
     const args = ['serve', '--hostname', '127.0.0.1', '--port', '0'], env = isolatedEnv(this.directory, this.config, password, { commandIsolation: Boolean(this.sandbox) });
     this.enginePID = null;
+    startup.phase('spawn');
     if (process.platform === 'win32') this.child = spawn(executable, args, { cwd: this.root, env, detached: this.detached, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
     else {
       // På macOS og Linux startes OpenCode gennem en vagtproces, så motoren også stopper, hvis Aura eller CLI'en
@@ -238,6 +253,13 @@ class OpenCodeEngine {
       this.child = spawn(node, [guardian, await guardedProgram(executable), ...args], { cwd: this.root, env: { ...env, ELECTRON_RUN_AS_NODE: '1' }, detached: true, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });
       this.child.on('message', message => { if (message?.type === 'engine' && Number.isInteger(message.pid)) this.enginePID = message.pid; });
     }
+    // Kun antal bytes registreres; rå procesoutput gemmes aldrig i diagnostikken.
+    const child = this.child;
+    let stdoutBytes = 0, stderrBytes = 0;
+    const countOut = chunk => startup.urlProgress({ stdoutBytes: stdoutBytes += chunk.length });
+    const countErr = chunk => startup.urlProgress({ stderrBytes: stderrBytes += chunk.length });
+    child.stdout.on('data', countOut); child.stderr.on('data', countErr);
+    startup.child(child);
     // Ingen rå proceslogs sendes til UI; de kan indeholde projektindhold.
     this.child.stderr.resume();
     this.child.on('exit', () => {
@@ -247,29 +269,40 @@ class OpenCodeEngine {
       this.active = false; this.handleEvent({ type: 'engine.error', message: 'Agentmotoren stoppede. Start opgaven igen for at oprette en ny session.', failure: { kind: 'engine' } });
     });
     try {
+      startup.phase('url');
       this.url = await new Promise((resolve, reject) => {
-        const timer = setTimeout(() => reject(new Error('Agentmotoren kunne ikke starte. Kontrollér installationen.')), 30000);
+        const timer = setTimeout(() => { startup.urlProgress({ timedOut: true }); reject(new Error('Agentmotoren kunne ikke starte. Kontrollér installationen.')); }, 30000);
         let output = '';
         const done = callback => value => { clearTimeout(timer); callback(value); };
         this.child.once('error', done(() => reject(new Error('Agentmotoren kunne ikke startes.'))));
         this.child.once('exit', done(() => reject(new Error('Agentmotoren afsluttede under opstart.'))));
         this.child.stdout.on('data', chunk => { output = (output + chunk.toString()).slice(-8000); const found = output.match(/http:\/\/127\.0\.0\.1:\d+/); if (found) done(resolve)(found[0]); });
       });
+      startup.urlProgress({ found: true });
+      startup.phase('health');
       const health = await this.request('/global/health');
       if (health.version !== VERSION) throw new Error('Agentmotorens version matcher ikke den afprøvede version.');
+      startup.phase('config-check');
       const effective = await this.request('/config');
       if (effective.small_model !== this.config.small_model || !isDeepStrictEqual(effective.enabled_providers, ['harness']) || effective.provider?.harness?.npm !== this.provider.npm || effective.provider?.harness?.options?.baseURL !== this.provider.options.baseURL || effective.provider?.harness?.options?.apiKey !== this.provider.options.apiKey || effective.model !== this.config.model || effective.share !== 'disabled' || effective.snapshot !== false || !isDeepStrictEqual(effective.permission, permission) || !isDeepStrictEqual(effective.agent?.plan?.permission, permission) || Object.keys(effective.mcp || {}).length || !isDeepStrictEqual(effective.plugin || [], this.config.plugin)) throw new Error('Agentens effektive indstillinger afviger. En lokal eller administreret konfiguration kan være årsagen.');
+      startup.phase('guard-ready');
       const readReady = await fs.readFile(readGuard.readyPath, 'utf8').then(JSON.parse).catch(() => null);
       if (readReady?.token !== readGuard.token) throw new Error('Filbeskyttelsen blev ikke indlæst. Opgaven blev ikke startet.');
       if (this.sandbox) {
         const ready = await fs.readFile(this.sandbox.readyPath, 'utf8').then(JSON.parse).catch(() => null);
         if (ready?.token !== this.sandbox.readyToken || ready?.identity !== this.sandbox.identity) throw new Error('Kommandobeskyttelsen blev ikke indlæst. Opgaven blev ikke startet.');
       }
+      startup.phase('session');
       await this.openSession();
       this.active = true;
       this.listen();
+      startup.phase('ready');
       return this.session.id;
     } catch (error) { await this.close(); throw error; }
+    finally {
+      child.stdout.removeListener('data', countOut); child.stderr.removeListener('data', countErr);
+      startup.child({ pid: child.pid, exitCode: child.exitCode, signal: child.signalCode });
+    }
   }
   async listen() {
     this.eventsAbort = new AbortController();

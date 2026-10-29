@@ -32,6 +32,8 @@ rememberKeychain(identity);
 app.setName(identity.keychainName);
 app.setPath('userData', identity.userData);
 app.setPath('sessionData', identity.sessionData);
+// Lokale opstartstider og faste fejlkoder; ingen stier, nøgler eller procesindhold.
+require('./core/engine-startup.cjs').install({ directory: path.join(identity.userData, 'harness', 'diagnostics') });
 
 protocol.registerSchemesAsPrivileged([...['harness', 'aura-preview'].map(scheme => ({ scheme, privileges: { standard: true, secure: true, supportFetchAPI: true } })), KeyWindow.scheme()]);
 let window, chosenParent = null;
