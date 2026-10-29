@@ -21,3 +21,15 @@ begrænset til 250 ms. Toolene kan ikke selv åbne filer, URL'er eller nøgler.
 
 Se [integrationskontrakten](../tools/aura-tool-lab/desktop-integration.md) og
 [toolpakken](../tools/aura-tool-lab/README.md) for kilde, bygning og afprøvning.
+
+## Lokal pakkekvalifikation, 29. oktober 2026
+
+Den byggede Apple Silicon-pakke `0.6.0-beta.1` består native appprøven med den
+medfølgende runtime, uden udvikler-PATH eller reserve til kildeappen. Prøven
+brugte 10 konkrete toolgodkendelser, tre delingsgennemgange og en kontrolleret
+loopback-model. UI-filerne matcher versionen før integrationen byte for byte.
+
+DMG-kontrolsum og appens signaturkontrol består. Pakken er lokalt adhoc-signeret,
+ikke notariseret og ikke offentliggjort som en GitHub-release. Den eksisterende
+brugerinstallation er ikke overskrevet. Se
+[testbeviset](evidence/local-tools-2026-10-28/package-native-2026-10-29.json).

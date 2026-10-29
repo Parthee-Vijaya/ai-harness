@@ -1,0 +1,39 @@
+{
+  "date": "2026-10-29",
+  "status": "passed",
+  "version": "0.6.0-beta.1",
+  "packaged": true,
+  "restrictedPath": true,
+  "architecture": "arm64",
+  "platform": "darwin",
+  "electron": "44.9.3",
+  "runtimeVersions": {
+    "opencode": "2.1.4",
+    "git": "2.53.0",
+    "node": "22.23.3"
+  },
+  "controlledModel": true,
+  "externalProviderCalls": 0,
+  "approvalCount": 10,
+  "sharingReviewCount": 3,
+  "checks": [
+    "All four tools execute in the real app after six concrete approvals",
+    "All five shared semantic fixtures pass",
+    "Local-only Privacy Gate keeps sensitive tool data in the documented loopback fixture",
+    "Reject and Stop prevent tool completion and any subsequent model request",
+    "Permission replay refused through real IPC",
+    "Cloud recipient receives exactly reviewed public tool-result bytes",
+    "Sensitive tool data blocks the next cloud request instead of bypassing Privacy Gate"
+  ],
+  "uiBaselineUnchanged": true,
+  "uiSha256": {
+    "index.html": "8e9ff8d40f212efc702f61e2df39215208418958c07588eac13a02b33b98c4a9",
+    "styles.css": "5a930d6c7e38cebc5522d4a19cf073821ec1c156bf8454d149ab09eb89d33f5f",
+    "app.js": "84dba1a9710b3dc7974cdd9d5da099afcd447cba86f6922baf904d346071201c",
+    "approvals.js": "8b2913697989cb36edba9b4586c7df256723ccd76fa50cbd32065c41fa199455",
+    "approval-view.js": "07050c536b4ac4787551c44b8bcd10b45e1811d8cedc2dfca014f9cebd8ed93b",
+    "privacy-gate.js": "26ab063e6bbcdc91f45b2a96d49747be60516821951bfa3d73e38f170fa97a39",
+    "privacy-gate.css": "ec788dfab55a2cf0aa5b4efd7e48449b7d4801451cfe74a89890d14254b21a5e"
+  },
+  "errors": []
+}

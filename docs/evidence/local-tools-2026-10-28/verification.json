@@ -49,8 +49,14 @@
     "signing": "ad-hoc",
     "notarized": false,
     "bundledPluginSha256": "c5beb16c7ab53c2d2f6cda8f09d189b07f0336b5d363bdb7a8964d49b7c41923",
-    "nativeAcceptance": "awaiting-macos-keychain-authorization",
+    "nativeAcceptance": "passed",
     "published": false,
-    "installedOverUserApp": false
+    "installedOverUserApp": false,
+    "acceptedAt": "2026-10-29T06:05:18.040Z",
+    "acceptanceReport": "package-native-2026-10-29.json",
+    "sha256": {
+      "Aura-1-0.6.0-beta.1-mac-arm64.dmg": "65cc6ee13da9e3916764b7c1f0762adf0524c848a4304c5f231ea7635a1d5dcd",
+      "Aura-1-0.6.0-beta.1-mac-arm64.zip": "55fa69fdcecde56cd56453256f25eb48b31c2228f2a38e76ab9d139936c76d40"
+    }
   }
 }
