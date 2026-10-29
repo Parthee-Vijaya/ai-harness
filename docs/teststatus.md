@@ -1,8 +1,26 @@
 # Teststatus før invitation
 
-Senest kontrolleret 23. oktober 2026. Afsnittene er daterede, så tidligere begrænsninger kan læses i deres sammenhæng. Dette er status for den aktuelle arbejdsmappe, ikke en erklæring om, at alle installationsfiler eller modeller er klar. Særskilt godkendte Git-handlinger, udgivelser og GitHub-kørsler fremgår af de enkelte afsnit.
+Senest kontrolleret 29. oktober 2026. Afsnittene er daterede, så tidligere begrænsninger kan læses i deres sammenhæng. Dette er status for den aktuelle arbejdsmappe, ikke en erklæring om, at alle installationsfiler eller modeller er klar. Særskilt godkendte Git-handlinger, udgivelser og GitHub-kørsler fremgår af de enkelte afsnit.
 
 [Gennemgangen før offentlig beta](offentliggoerelse.md) samler historik- og logkontrol samt de lokale prøver af README, hjemmeside og udgivelseskontrol. Den offentliggør ikke appen og ændrer ikke installationsstatus nedenfor.
+
+## Afhængigheder: Electron 44.9.1 og tre mindre opdateringer · 29. oktober 2026
+
+Dependabot #15 (sikkerhed) og #51 (mindre opdateringer) er overtaget i `desktop/package.json`. Ingen pakker er lagt til eller fjernet; låsefilen ændrede 68 linjer, alle versionsnumre.
+
+- `electron` 44.4.4 → **44.9.1**. Retter GHSA-jr5w-w6x2-84p9 (kompromitterede eMudhra-mellemcertifikater). 44.9.0 retter desuden, at vinduer åbnet fra links ikke brugte åbnerens session og `webPreferences` — det rører nøglevinduets isolation direkte.
+- `electron-builder` 26.16.1 → 26.18.0, `playwright` 1.63.0 → 1.64.1, `electron-updater` 6.8.9 → 6.8.11.
+- **`@opencode-ai/plugin` er bevidst ikke opdateret.** #51 ville sætte den til 1.19.4, men `desktop/core/engine.cjs` holder 1.18.33 som konstant og afviser motoren ved uoverensstemmelse. Den låste OpenCode-binær og de otte `opencode-*`-pakker i roden står samme sted. Plugin'et løftes sammen med #11.
+
+**Enhedstestet:** 695 af 695 prøver består med de nye afhængigheder (Node 22.23.3).
+
+**Afprøvet på konkret materiale:** fire Electron-suiter består på Electron 44.9.1 og playwright 1.64.1 — `test:desktop`, `test:key-window`, `test:updates` og `test:materials`. Nøglevinduet er altså stadig isoleret efter Electron-opdateringen, og opdateringskontrollen henter og afviser stadig på SHA-512.
+
+**Ikke verificeret, og hvorfor:** `test:chat`, `test:planning` og `test:approvals` fejler. De er kørt igen med de **gamle** afhængigheder (Electron 44.4.4, playwright 1.63.0) og fejler dér på samme måde, så opdateringen er ikke årsagen. Alle tre fejl er tidsudløb, ikke forkerte værdier, og alle tre venter på, at AI-agenten leverer noget. Appen viser "Aura kunne ikke starte AI'en" eller "Ingen nye signaler i 90 s". Kontrolleret undervejs: OpenCode-binæren svarer `1.18.33` og starter på 6,1 s mod motorens budget på 30 s; `findExecutable` og `writePluginRuntime` gennemføres; brugerens globale `~/.config/opencode/opencode.jsonc` når ikke ind, fordi `isolatedEnv` sætter `HOME`, `XDG_CONFIG_HOME` og `OPENCODE_CONFIG_CONTENT` selv; `npm ci` kørte uden fejl, og `@anthropic-ai/sandbox-runtime` er komplet. Årsagen er ikke fundet. Maskinen var samtidig stærkt belastet (10 kerner, belastningstal 176 faldende til 23 under kørslerne, fra en samtidig Codex-session og 73 zombieprocesser under Pioneers `FwUpdateManagerd`), men suiterne fejlede også ved belastningstal 23, så belastning forklarer det ikke alene.
+
+**Ikke kørt:** `test:package` og pakning med `electron-builder` 26.18.0. Pakning kræver committet kildekode og er ikke afprøvet på denne opdatering. Installationsfiler til andre platforme er fortsat uprøvede.
+
+**Metodefejl rettet undervejs:** første kørsel rapporterede alle syv suiter som bestået. Kørslen var skrevet som `npm run test:X | tail -20` inde i en `if`, så `if` målte `tail`, der altid lykkes. Guarden kunne ikke fejle. Den er skrevet om til at gemme `$?` fra `npm run` direkte, og den nye form er afprøvet mod en kommando, der fejler, før resultaterne ovenfor blev brugt.
 
 ## Offentlig desktopbeta 0.5.0-beta.3 · 23. oktober 2026
 
