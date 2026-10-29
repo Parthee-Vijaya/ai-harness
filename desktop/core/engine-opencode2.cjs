@@ -5,7 +5,7 @@ const path = require('node:path');
 const { isDeepStrictEqual } = require('node:util');
 const fs = require('node:fs/promises');
 
-const legacyAction = action => ({ shell: 'bash', subagent: 'task' })[action] || action;
+const legacyAction = action => ({ shell: 'bash', subagent: 'task', patch: 'apply_patch' })[action] || action;
 const nativeAction = action => ({ bash: 'shell', task: 'subagent', write: 'edit', patch: 'edit' })[action] || action;
 const compact = value => JSON.parse(JSON.stringify(value));
 function nativePermissions(permission) {
@@ -164,9 +164,20 @@ class EventAdapter {
       part.state = { ...part.state, status: event.type.endsWith('success') ? 'completed' : 'error', output: textContent(d.content), metadata: d.metadata || {}, ...(d.error ? { error: d.error.message || d.error.type } : {}) }; update(part);
     } else if (event.type === 'permission.asked') {
       const part = d.source?.id ? this.tools.get(this.partID(d.source.messageID, 'tool', d.source.id)) : null;
-      const files = (d.metadata?.files || []).map(file => ({ ...file, file: typeof file.file === 'string' ? path.resolve(this.root, file.file) : file.file }));
+      // V2 patch metadata uses file/status; the existing approval policy binds
+      // filePath/type together with every target in the unchanged patchText.
+      // Unknown statuses remain invalid instead of silently dropping a target.
+      const files = (d.metadata?.files || []).map(file => {
+        const absolute = typeof file.file === 'string' ? path.resolve(this.root, file.file) : file.file;
+        return { ...file, file: absolute, filePath: absolute, type: ({ added: 'add', modified: 'update', deleted: 'delete' })[file.status] };
+      });
       const file = files.length === 1 ? files[0].file : part?.state?.input?.filePath;
-      const metadata = { ...(d.metadata || {}), ...(files.length ? { files } : {}), ...(file ? { filepath: file } : {}) };
+      // For patches filepath is the native display list, even with one target.
+      // Pending permissions precede restored tool parts during reconnection.
+      // Recognize only the native status/display-list shape in that case;
+      // ordinary single-file edits retain their absolute-path fallback.
+      const patchDisplay = part?.tool === 'apply_patch' || !part && files.length > 0 && files.some(file => file.status !== undefined) && d.metadata?.filepath === (d.resources || []).join(', ');
+      const metadata = { ...(d.metadata || {}), ...(files.length ? { files } : {}), ...(file && !patchDisplay ? { filepath: file } : {}) };
       if (files.length === 1 && typeof files[0].patch === 'string') metadata.diff = files[0].patch;
       emit('permission.asked', { id: d.id, sessionID: d.sessionID, permission: legacyAction(d.action), patterns: d.resources || [], always: d.save || [], metadata, ...(d.source ? { tool: { messageID: d.source.messageID, callID: d.source.id } } : {}) });
     } else if (event.type === 'permission.replied') emit(event.type, { ...d, requestID: d.requestID || d.id, reply: d.reply || d.decision });

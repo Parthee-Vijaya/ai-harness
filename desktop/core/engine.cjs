@@ -45,6 +45,10 @@ const SKILL_FILE = /^(SKILL\.md|references\/[a-z0-9-]+\.md)$/;
 const skillPattern = directory => `*/${path.basename(directory)}/config/skills/*`;
 function permissions(root, references, mode = 'free', skills = null) {
   const read = { '*': 'allow', ...Object.fromEntries(protectedPaths.toOpenCodeGlobs().map(pattern => [pattern, 'deny'])) };
+  // V2 represents the canonical project root as ".", which also matches the
+  // portable trailing-dot deny. Permit only that exact directory resource;
+  // the realpath guard still rejects protected roots, aliases and descendants.
+  read['.'] = 'allow';
   // Udvalgte referencer har et unikt filnavn fra appen, så mønsteret kun rammer den valgte fil.
   for (const file of references) if (!protectedPaths.isProtected(file, { references: false })) for (const pattern of [file, `*/${file}`]) read[pattern] = 'allow';
   const external = { '*': 'ask' };
